@@ -1,2 +1,2 @@
-# agr4bs
+# AGR4BS
 AGR4BS python class definitions
