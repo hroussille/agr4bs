@@ -6,5 +6,5 @@ class GroupManager(Role):
     def __init__(self) -> None:
         super().__init__(RoleType.GROUP_MANAGER)
 
-    def authorize():
+    def authorize(self):
         raise NotImplementedError

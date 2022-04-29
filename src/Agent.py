@@ -13,7 +13,6 @@ class Agent(object):
         """
         self.name = name
         self.balance = initial_balance
-        self.roles = {}
 
     def hasRole(self, role: RoleType) -> bool:
         """ Check whether the agent has a specific Role

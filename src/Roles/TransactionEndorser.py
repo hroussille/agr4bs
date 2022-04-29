@@ -6,5 +6,5 @@ class TransactionEndorser(Role):
     def __init__(self) -> None:
         super().__init__(RoleType.TRANSACTION_ENDORSER)
 
-    def endoreTransaction():
+    def endoreTransaction(self):
         raise NotImplementedError

@@ -1,3 +1,4 @@
+from Agent import Agent
 from enum import Enum
 
 
@@ -18,3 +19,7 @@ class Role:
 
     def __init__(self, type: RoleType) -> None:
         self.type = type
+        self.agent = None
+
+    def bind(self, agent: Agent) -> None:
+        self.agent = agent

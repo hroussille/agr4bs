@@ -6,11 +6,11 @@ class Investor(Role):
     def __init__(self) -> None:
         super().__init__(RoleType.INVESTOR)
 
-    def specifyInvestment():
+    def specifyInvestment(self):
         raise NotImplementedError
 
-    def invest():
+    def invest(self):
         raise NotImplementedError
 
-    def withdraw():
+    def withdraw(self):
         raise NotImplementedError

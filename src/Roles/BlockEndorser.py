@@ -6,5 +6,5 @@ class BlockEndorser(Role):
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCK_ENDORSER)
 
-    def endorseBlock():
+    def endorseBlock(self):
         raise NotImplementedError
