@@ -1,5 +1,5 @@
 from Role import Role, RoleType
-from Common import Block
+from Common.Block import Block
 
 
 class BlockEndorser(Role):
@@ -20,7 +20,7 @@ class BlockEndorser(Role):
     def endorsementStrategy(self):
         del self._endorsementStrategy
 
-    def endorseBlock(self, block: Block) -> bool:
+    def endorseBlock(self, block: Block, *args, **kwargs) -> bool:
         """ Endorse a specific block
 
             :param block: the block to endorse

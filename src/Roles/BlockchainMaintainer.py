@@ -1,12 +1,13 @@
 from Role import Role, RoleType
-from Common import Transaction, Block
+from Common.Transaction import Transaction
+from Common.Block import Block
 
 
 class BlockchainMaintainer(Role):
 
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCKCHAIN_MAINTAINER)
-        self._txPool = {}
+        self._txPool = []
         self._blockchain = {}
 
     @property
@@ -20,6 +21,7 @@ class BlockchainMaintainer(Role):
     @txPool.deleter
     def txPool(self):
         del self._txPool
+        self._txPool = []
 
     @property
     def blockchain(self):
@@ -32,6 +34,7 @@ class BlockchainMaintainer(Role):
     @blockchain.deleter
     def blockchain(self):
         del self._blockchain
+        self._blockchain = {}
 
     def validateTransaction(self, transaction: Transaction, *args, **kwargs) -> bool:
         """ Validate a specific transactiont
