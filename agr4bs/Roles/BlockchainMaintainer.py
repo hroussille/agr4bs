@@ -1,6 +1,5 @@
-from Role import Role, RoleType
-from Common.Transaction import Transaction
-from Common.Block import Block
+from ..Role import Role, RoleType
+from ..Common import Transaction, Block
 
 
 class BlockchainMaintainer(Role):

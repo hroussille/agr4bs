@@ -1,4 +1,4 @@
-from Role import Role, RoleType
+from ..Role import Role, RoleType
 
 
 class Contractor(Role):

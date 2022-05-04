@@ -1,6 +1,6 @@
-from Role import Role, RoleType
-from Agent import Agent
-from Common.Transaction import Transaction, Payload
+from ..Role import Role, RoleType
+from ..Agent import Agent
+from ..Common import Transaction, Payload
 
 
 class TransactionProposer(Role):

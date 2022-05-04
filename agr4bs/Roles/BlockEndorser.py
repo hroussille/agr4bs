@@ -1,5 +1,5 @@
-from Role import Role, RoleType
-from Common.Block import Block
+from ..Role import Role, RoleType
+from ..Common import Block
 
 
 class BlockEndorser(Role):

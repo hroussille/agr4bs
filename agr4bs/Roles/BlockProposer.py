@@ -1,6 +1,6 @@
-from Role import Role, RoleType
-from Common.Transaction import Transaction
-from src.Common.Block import Block
+from ..Role import Role, RoleType
+from ..Common import Transaction
+from ..Common import Block
 
 
 class BlockProposer(Role):

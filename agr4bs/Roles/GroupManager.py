@@ -1,5 +1,5 @@
-from Role import Role, RoleType
-from Agent import Agent
+from ..Role import Role, RoleType
+from ..Agent import Agent
 
 
 class GroupManager(Role):

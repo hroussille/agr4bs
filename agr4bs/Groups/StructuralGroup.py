@@ -1,4 +1,4 @@
-from Group import Group, GroupType
+from ..Group import Group, GroupType
 
 
 class StructuralGroup(Group):

@@ -1,5 +1,3 @@
-from Role import Role, RoleType
-
 
 class Agent(object):
 
@@ -14,7 +12,7 @@ class Agent(object):
         self.name = name
         self.balance = initial_balance
 
-    def hasRole(self, role: RoleType) -> bool:
+    def hasRole(self, role: 'RoleType') -> bool:
         """ Check whether the agent has a specific Role
 
             :param role: the role to check for
@@ -24,7 +22,7 @@ class Agent(object):
         """
         return role in self.roles
 
-    def addRole(self, role: Role) -> bool:
+    def addRole(self, role: 'Role') -> bool:
         """ Add a specific role to the agent
 
             :param role: the role to add
@@ -38,7 +36,7 @@ class Agent(object):
         self.roles[role.type] = role
         return True
 
-    def removeRole(self, role: Role) -> bool:
+    def removeRole(self, role: 'Role') -> bool:
         """ Remove a specific role from the agent
 
             :param role: the role to remove
@@ -52,7 +50,7 @@ class Agent(object):
         self.roles[role.type] = None
         return False
 
-    def getRole(self, role: RoleType) -> Role:
+    def getRole(self, role: 'RoleType') -> 'Role':
         """ Get a specific Role instance from the Agent
 
             :param role: the role type to get

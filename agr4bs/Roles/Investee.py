@@ -1,6 +1,6 @@
-from Role import Role, RoleType
-from Common.Investment import Investment
-from Agent import Agent
+from ..Role import Role, RoleType
+from ..Common import Investment
+from ..Agent import Agent
 
 
 class Investee(Role):

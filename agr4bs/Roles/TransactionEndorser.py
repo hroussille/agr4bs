@@ -1,5 +1,5 @@
-from Role import Role, RoleType
-from Common.Transaction import Transaction
+from ..Role import Role, RoleType
+from ..Common import Transaction
 
 
 class TransactionEndorser(Role):
