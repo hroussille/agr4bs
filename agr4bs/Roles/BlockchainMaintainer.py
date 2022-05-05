@@ -1,3 +1,4 @@
+from ..Agent import Agent
 from ..Role import Role, RoleType
 from ..Common import Transaction, Block
 
@@ -6,36 +7,28 @@ class BlockchainMaintainer(Role):
 
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCKCHAIN_MAINTAINER)
-        self._txPool = []
-        self._blockchain = {}
+        self._behaviors = self._behaviors | {
+        'validateTransaction': BlockchainMaintainer.validateTransaction,
+        'validateBlock': BlockchainMaintainer.validateBlock,
+        'storeTransaction': BlockchainMaintainer.storeTransaction,
+        'appendBlock': BlockchainMaintainer.appendBlock,
+        'executeTransaction': BlockchainMaintainer.executeTransaction
+        }
 
-    @property
-    def txPool(self):
-        return self._txPool
+    @staticmethod
+    def bind(agent: Agent):
+        super(Role, Role).bind(agent)
+        setattr(agent, "txpool", {});
+        setattr(agent, "blockchain", {});
 
-    @txPool.setter
-    def txPool(self, newTxPool):
-        self._txPool = newTxPool
+    @staticmethod
+    def unbind(agent: Agent):
+        super(Role, Role).unbind(agent);
+        delattr(agent, 'txpool');
+        delattr(agent, 'blockchain');
 
-    @txPool.deleter
-    def txPool(self):
-        del self._txPool
-        self._txPool = []
-
-    @property
-    def blockchain(self):
-        return self._blockchain
-
-    @blockchain.setter
-    def blockchain(self, newBlockchain):
-        self._blockchain = newBlockchain
-
-    @blockchain.deleter
-    def blockchain(self):
-        del self._blockchain
-        self._blockchain = {}
-
-    def validateTransaction(self, transaction: Transaction, *args, **kwargs) -> bool:
+    @staticmethod
+    def validateTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Validate a specific transactiont
 
             :param transaction: the transaction to validate
@@ -45,7 +38,8 @@ class BlockchainMaintainer(Role):
         """
         raise NotImplementedError
 
-    def validateBlock(self, block: Block, *args, **kwargs) -> bool:
+    @staticmethod
+    def validateBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Validate a specific Block
 
             :param block: the block to validate
@@ -55,7 +49,8 @@ class BlockchainMaintainer(Role):
         """
         raise NotImplementedError
 
-    def storeTransaction(self, transaction: Transaction, *args, **kwargs) -> bool:
+    @staticmethod
+    def storeTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Store a specific transaction
 
             :param transaction: the transaction to store
@@ -65,7 +60,8 @@ class BlockchainMaintainer(Role):
         """
         raise NotImplementedError
 
-    def appendBlock(self, block: Block, *args, **kwargs) -> bool:
+    @staticmethod
+    def appendBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Append a specific block to the local blockchain
 
             :param block: the block to append
@@ -75,7 +71,8 @@ class BlockchainMaintainer(Role):
         """
         raise NotImplementedError
 
-    def executeTransaction(self, transaction: Transaction, *args, **kwargs) -> bool:
+    @staticmethod
+    def executeTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Execute a specific transaction
 
             :param transaction: the transaction to execute

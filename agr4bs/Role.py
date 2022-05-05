@@ -1,3 +1,4 @@
+import logging
 from .Agent import Agent
 from enum import Enum
 
@@ -19,12 +20,14 @@ class Role:
 
     def __init__(self, type: RoleType) -> None:
         self._type = type
-        self._agent = None
+        self._behaviors = {}
+
+    @property
+    def behaviors(self):
+        return self._behaviors
 
     def bind(self, agent: Agent) -> None:
-        if self._agent is not None:
-            raise ValueError('Attempting to bind an already binded Role')
-        self._agent = agent
-
-    def unbind(self) -> None:
-        self._agent = None
+        logging.debug('Binding %s to %s', self._type, agent.name)
+    
+    def unbind(self, agent: Agent) -> None:
+        logging.debug('Unbinding %s from %s', self._type, agent.name)

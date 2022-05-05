@@ -35,6 +35,11 @@ class Agent(object):
             return False
 
         self.roles[role.type] = role
+        self.roles[role.type].bind(self)
+
+        for behavior, implementation in role.behaviors():
+            setattr(self, behavior, implementation)
+
         return True
 
     def removeRole(self, role: 'Role') -> bool:
@@ -48,8 +53,13 @@ class Agent(object):
         if not(self.hasRole(role.type)):
             return False
 
+        self.roles[role.type].unbind();
+        
+        for behavior, _ in role.behaviors():
+            delattr(self, behavior)
+
         self.roles[role.type] = None
-        return False
+        return True
 
     def getRole(self, role: 'RoleType') -> 'Role':
         """ Get a specific Role instance from the Agent
