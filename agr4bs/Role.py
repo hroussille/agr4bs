@@ -18,8 +18,13 @@ class RoleType(Enum):
 class Role:
 
     def __init__(self, type: RoleType) -> None:
-        self.type = type
-        self.agent = None
+        self._type = type
+        self._agent = None
 
     def bind(self, agent: Agent) -> None:
-        self.agent = agent
+        if self._agent is not None:
+            raise ValueError('Attempting to bind an already binded Role')
+        self._agent = agent
+
+    def unbind(self) -> None:
+        self._agent = None
