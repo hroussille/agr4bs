@@ -2,7 +2,7 @@
 class Agent(object):
 
     def __init__(self, name: str, initial_balance: int = 0) -> None:
-        """ Initializes the Agent interface 
+        """ Initializes the Agent interface
 
             :param name: the name of the agent
             :type name: str
@@ -11,12 +11,13 @@ class Agent(object):
         """
         self.name = name
         self.balance = initial_balance
+        self.roles = {}
 
     def hasRole(self, role: 'RoleType') -> bool:
         """ Check whether the agent has a specific Role
 
             :param role: the role to check for
-            :type role: RoleType 
+            :type role: RoleType
             :returns: wether the agent has the role or not
             :rtype: bool
         """
@@ -26,7 +27,7 @@ class Agent(object):
         """ Add a specific role to the agent
 
             :param role: the role to add
-            :type role: Role 
+            :type role: Role
             :returns: wether the role was added or not
             :rtype: bool
         """
@@ -40,7 +41,7 @@ class Agent(object):
         """ Remove a specific role from the agent
 
             :param role: the role to remove
-            :type role: Role 
+            :type role: Role
             :returns: wether the role was removed or not
             :rtype: bool
         """
