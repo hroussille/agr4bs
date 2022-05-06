@@ -1,6 +1,15 @@
+from ..Agent import Agent, StateChange
 from ..Role import Role, RoleType
 from ..Common import Transaction
 from ..Common import Block
+
+
+class BlockProposerStateChange(StateChange):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.transactionSelectionStrategy = None
 
 
 class BlockProposer(Role):
@@ -8,7 +17,12 @@ class BlockProposer(Role):
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCK_PROPOSER)
 
-    def selectTransaction(self, transactions: list[Transaction], *args, **kwargs) -> list[Transaction]:
+    @staticmethod
+    def stateChange() -> StateChange:
+        return BlockProposerStateChange()
+
+    @staticmethod
+    def selectTransaction(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> list[Transaction]:
         """ Select a subset of transactions for inclusion in a block
 
             :param transactions: the available transactions
@@ -18,7 +32,8 @@ class BlockProposer(Role):
         """
         raise NotImplementedError
 
-    def createBlock(self, transactions: list[Transaction], *args, **kwargs) -> Block:
+    @staticmethod
+    def createBlock(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> Block:
         """ Creates a block with the given transactions
 
             :param transactions: the transactions to include in the block
@@ -28,7 +43,8 @@ class BlockProposer(Role):
         """
         raise NotImplementedError
 
-    def proposeBlock(self, block: Block, *args, **kwargs):
+    @staticmethod
+    def proposeBlock(block: Block, *args, **kwargs):
         """ Propose a block to the network
 
             :param block: the block to propose to the network
