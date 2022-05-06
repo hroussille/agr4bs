@@ -1,36 +1,32 @@
-from ..Agent import Agent
+from ..Agent import Agent, StateChange
 from ..Role import Role, RoleType
 from ..Common import Transaction, Block
+
+
+class BlockchainMaintainerStateChange(StateChange):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.txpool = {}
+        self.blockchain = {}
 
 
 class BlockchainMaintainer(Role):
 
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCKCHAIN_MAINTAINER)
-        self._behaviors = self._behaviors | {
-        'validateTransaction': BlockchainMaintainer.validateTransaction,
-        'validateBlock': BlockchainMaintainer.validateBlock,
-        'storeTransaction': BlockchainMaintainer.storeTransaction,
-        'appendBlock': BlockchainMaintainer.appendBlock,
-        'executeTransaction': BlockchainMaintainer.executeTransaction
-        }
 
     @staticmethod
-    def bind(agent: Agent):
-        super(Role, Role).bind(agent)
-        setattr(agent, "txpool", {});
-        setattr(agent, "blockchain", {});
-
-    @staticmethod
-    def unbind(agent: Agent):
-        super(Role, Role).unbind(agent);
-        delattr(agent, 'txpool');
-        delattr(agent, 'blockchain');
+    def stateChange() -> StateChange:
+        return BlockchainMaintainerStateChange()
 
     @staticmethod
     def validateTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
-        """ Validate a specific transactiont
+        """ Validate a specific transaction
 
+            :param agent: the agent on which the behavior operates
+            :type agent: Agent
             :param transaction: the transaction to validate
             :type transaction: Transaction
             :returns: wether the transaction is valid or not
@@ -42,6 +38,8 @@ class BlockchainMaintainer(Role):
     def validateBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Validate a specific Block
 
+            :param agent: the agent on which the behavior operates
+            :type agent: Agent
             :param block: the block to validate
             :type block: Block
             :returns: wether the block is valid or not
@@ -53,6 +51,8 @@ class BlockchainMaintainer(Role):
     def storeTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Store a specific transaction
 
+            :param agent: the agent on which the behavior operates
+            :type agent: Agent
             :param transaction: the transaction to store
             :type transaction: Transaction
             :returns: wether the transaction was stored or not
@@ -64,6 +64,8 @@ class BlockchainMaintainer(Role):
     def appendBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Append a specific block to the local blockchain
 
+            :param agent: the agent on which the behavior operates
+            :type agent: Agent
             :param block: the block to append
             :type block: Block
             :returns: wether the block was appended or not
