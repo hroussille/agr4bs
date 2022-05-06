@@ -1,6 +1,15 @@
 import logging
-from .Agent import Agent
-from enum import Enum
+from .Agent import Agent, StateChange
+from enum import Enum, EnumMeta
+
+
+class BindBlackListMeta(EnumMeta):
+    def __contains__(cls, item):
+        return item in [v.value for v in cls.__members__.values()]
+
+
+class BindBlackList(Enum, metaclass=BindBlackListMeta):
+    STATE_CHANGE = "stateChange"
 
 
 class RoleType(Enum):
@@ -20,14 +29,15 @@ class Role:
 
     def __init__(self, type: RoleType) -> None:
         self._type = type
-        self._behaviors = {}
+
+    @staticmethod
+    def stateChange() -> StateChange:
+        return StateChange()
 
     @property
     def behaviors(self):
-        return self._behaviors
+        return {behavior: implementation for behavior, implementation in self.__class__.__dict__.items() if behavior not in BindBlackList and isinstance(implementation, staticmethod)}
 
-    def bind(self, agent: Agent) -> None:
-        logging.debug('Binding %s to %s', self._type, agent.name)
-    
-    def unbind(self, agent: Agent) -> None:
-        logging.debug('Unbinding %s from %s', self._type, agent.name)
+    @property
+    def type(self):
+        return self._type
