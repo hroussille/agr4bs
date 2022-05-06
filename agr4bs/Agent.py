@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 
 class StateChange(object):
 
@@ -27,7 +29,7 @@ class Agent(object):
         if initial_state is None:
             initial_state = {}
 
-        self._state = {} | initial_state
+        self._state = {} | deepcopy(initial_state)
 
     @property
     def roles(self):
