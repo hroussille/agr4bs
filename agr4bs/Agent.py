@@ -1,17 +1,41 @@
 
+class StateChange(object):
+
+    def __init__(self) -> None:
+        pass
+
+    def mount(self) -> dict:
+        return self.__dict__
+
+    def unmount(self) -> list:
+        return list(self.__dict__.keys())
+
+
 class Agent(object):
 
-    def __init__(self, name: str, initial_balance: int = 0) -> None:
+    def __init__(self, name: str, initial_state: dict = None) -> None:
         """ Initializes the Agent interface
 
             :param name: the name of the agent
             :type name: str
-            :param initial_balance: the initial balance of the agent
-            :type initial_balance: int
+            :param initial_state: the initial state of the agent
+            :type initial_state: dict
         """
         self.name = name
-        self.balance = initial_balance
-        self.roles = {}
+        self._roles = {}
+
+        if initial_state is None:
+            initial_state = {}
+
+        self._state = {} | initial_state
+
+    @property
+    def roles(self):
+        return self._roles
+
+    @property
+    def state(self):
+        return self._state
 
     def hasRole(self, role: 'RoleType') -> bool:
         """ Check whether the agent has a specific Role
@@ -21,7 +45,10 @@ class Agent(object):
             :returns: wether the agent has the role or not
             :rtype: bool
         """
-        return role in self.roles
+        return role in self._roles
+
+    def hasBehavior(self, behavior: str) -> bool:
+        return hasattr(self, behavior)
 
     def addRole(self, role: 'Role') -> bool:
         """ Add a specific role to the agent
@@ -34,10 +61,10 @@ class Agent(object):
         if self.hasRole(role.type):
             return False
 
-        self.roles[role.type] = role
-        self.roles[role.type].bind(self)
+        self._roles[role.type] = role
+        self._state |= role.stateChange().mount()
 
-        for behavior, implementation in role.behaviors():
+        for behavior, implementation in role.behaviors.items():
             setattr(self, behavior, implementation)
 
         return True
@@ -53,23 +80,25 @@ class Agent(object):
         if not(self.hasRole(role.type)):
             return False
 
-        self.roles[role.type].unbind();
-        
-        for behavior, _ in role.behaviors():
+        for behavior in role.behaviors:
             delattr(self, behavior)
 
-        self.roles[role.type] = None
+        for stateProperty in role.stateChange().unmount():
+            del self._state[stateProperty]
+
+        del self._roles[role.type]
+
         return True
 
-    def getRole(self, role: 'RoleType') -> 'Role':
+    def getRole(self, roleType: 'RoleType') -> 'Role':
         """ Get a specific Role instance from the Agent
 
-            :param role: the role type to get
-            :type role: RoleType
+            :param roleType: the role type to get
+            :type roleType: RoleType
             :returns: the role instance or None
             :rtype: Role
         """
-        if not(self.hasRole(role.type)):
+        if not(self.hasRole(roleType)):
             return None
 
-        return self.roles[role]
+        return self._roles[roleType]
