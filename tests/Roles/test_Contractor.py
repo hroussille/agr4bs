@@ -2,38 +2,44 @@ import agr4bs
 from agr4bs.Role import RoleType
 
 
-def test_contractorType():
+def test_Contractor_type():
     role = agr4bs.Roles.Contractor()
     assert role.type == agr4bs.RoleType.CONTRACTOR
 
 
-def test_contractorAddition():
-    agent = agr4bs.Agent("agent_0")
-    role = agr4bs.Roles.Contractor()
-    agent.addRole(role)
-
-    assert agent.hasRole(RoleType.CONTRACTOR)
-
-    for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior)
-
-    for stateChange in role.stateChange().mount():
-        assert stateChange in agent.state
-
-    assert agent.getRole(RoleType.CONTRACTOR) == role
-
-
-def test_contractorRemoval():
-    agent = agr4bs.Agent("agent_0")
+def test_Contractor_behaviors():
     role = agr4bs.Roles.Contractor()
 
-    agent.addRole(role)
-    agent.removeRole(role)
+    assert 'state_change' not in role.behaviors
 
-    assert agent.hasRole(RoleType.CONTRACTOR) == False
+
+def test_Contractor_addition():
+    agent = agr4bs.Agent("agent_0")
+    role = agr4bs.Roles.Contractor()
+    agent.add_role(role)
+
+    assert agent.has_role(RoleType.CONTRACTOR)
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior) == False
+        assert agent.has_behavior(behavior)
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange not in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change in agent.state
+
+    assert agent.get_role(RoleType.CONTRACTOR) == role
+
+
+def test_ContractorRemoval():
+    agent = agr4bs.Agent("agent_0")
+    role = agr4bs.Roles.Contractor()
+
+    agent.add_role(role)
+    agent.remove_role(role)
+
+    assert agent.has_role(RoleType.CONTRACTOR) is False
+
+    for behavior in role.behaviors:
+        assert agent.has_behavior(behavior) is False
+
+    for state_change in role.state_change().mount():
+        assert state_change not in agent.state

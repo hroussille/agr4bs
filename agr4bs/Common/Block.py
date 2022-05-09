@@ -6,16 +6,16 @@ from ..Agent import Agent
 class Block(object):
 
     def __init__(self, parentHash: str, creator: str, transactions: list[Transaction]) -> None:
-        self._parentHash = parentHash
+        self._parent_hash = parentHash
         self._transactions = transactions
         self._creator = creator
-        self._hash = self.computeHash()
-        self._totalFees = sum(map(lambda tx: tx.fee, self._transactions))
+        self._hash = self.compute_hash()
+        self._total_fees = sum(map(lambda tx: tx.fee, self._transactions))
         self._height = 0
 
     @property
-    def parentHash(self) -> "str":
-        return self._parentHash
+    def parent_hash(self) -> "str":
+        return self._parent_hash
 
     @property
     def transactions(self) -> list[Transaction]:
@@ -26,8 +26,8 @@ class Block(object):
         return self._creator
 
     @property
-    def totalFees(self) -> int:
-        return self._totalFees
+    def total_fees(self) -> int:
+        return self._total_fees
 
     @property
     def hash(self) -> str:
@@ -50,7 +50,7 @@ class Block(object):
 
     def serialize(self) -> str:
         serializedTx = ''.join("%s" % ','.join(map(str, self._transactions)))
-        return "{{ parentHash: {} - creator: {} - transactions: {} }}".format(self._parentHash, self._creator, serializedTx)
+        return "{{ parentHash: {} - creator: {} - transactions: {} }}".format(self._parent_hash, self._creator, serializedTx)
 
-    def computeHash(self) -> str:
+    def compute_hash(self) -> str:
         return hashlib.sha256(self.serialize().encode()).hexdigest()

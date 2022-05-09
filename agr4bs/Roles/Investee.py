@@ -21,7 +21,7 @@ class Investee(Role):
         return InvesteeStateChange()
 
     @staticmethod
-    def receiveInvestment(agent: Agent, investment: Investment, *args, **kwargs):
+    def receive_investment(agent: Agent, investment: Investment, *args, **kwargs):
         """ Receive an investment from an Investor
 
             :param agent: the agent on which the behavior operates
@@ -32,7 +32,7 @@ class Investee(Role):
         raise NotImplementedError
 
     @staticmethod
-    def redistribute(agent: Agent,  investor: Agent, *args, **kwargs) -> bool:
+    def redistribute(agent: Agent, investor: Agent, *args, **kwargs) -> bool:
         """ Redistribute earnings to a specific investor as investment
 
             :param agent: the agent on which the behavior operates
@@ -45,7 +45,7 @@ class Investee(Role):
         raise NotImplementedError
 
     @staticmethod
-    def redistributeFull(agent: Agent, investor: Agent, *args, **kwargs) -> bool:
+    def redistribute_full(agent: Agent, investor: Agent, *args, **kwargs) -> bool:
         """ Redistribute earnings AND investment(s) to a specific investor
 
             :param agent: the agent on which the behavior operates

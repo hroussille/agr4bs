@@ -9,7 +9,7 @@ def test_Blockchain_properties():
     assert blockchain.head == genesis
 
 
-def test_Blockchain_addBlockStrict():
+def test_Blockchain_add_block_strict():
 
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
@@ -19,26 +19,26 @@ def test_Blockchain_addBlockStrict():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block("uknown hash", "agent0", [])
 
-    assert blockchain.addBlockStrict(block1) == True
+    assert blockchain.add_block_strict(block1) is True
     assert blockchain.head == block1
-    assert blockchain.getBlock(block1.hash).height == 1
+    assert blockchain.get_block(block1.hash).height == 1
 
-    assert blockchain.addBlockStrict(block2) == True
+    assert blockchain.add_block_strict(block2) is True
     assert blockchain.head == block2
-    assert blockchain.getBlock(block2.hash).height == 2
+    assert blockchain.get_block(block2.hash).height == 2
 
-    assert blockchain.addBlockStrict(block3) == True
+    assert blockchain.add_block_strict(block3) is True
     assert blockchain.head == block3
-    assert blockchain.getBlock(block3.hash).height == 3
+    assert blockchain.get_block(block3.hash).height == 3
 
-    assert blockchain.addBlockStrict(block4) == False
+    assert blockchain.add_block_strict(block4) is False
     assert blockchain.head == block3
-    assert blockchain.getBlock(block4.hash) == None
+    assert blockchain.get_block(block4.hash) is None
 
     assert blockchain.genesis == genesis
 
 
-def test_Blockchain_addBlock_strict_scenario():
+def test_Blockchain_add_block_strict_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -47,26 +47,26 @@ def test_Blockchain_addBlock_strict_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block("uknown hash", "agent0", [])
 
-    assert blockchain.addBlock(block1) == True
+    assert blockchain.add_block(block1) is True
     assert blockchain.head == block1
-    assert blockchain.getBlock(block1.hash).height == 1
+    assert blockchain.get_block(block1.hash).height == 1
 
-    assert blockchain.addBlock(block2) == True
+    assert blockchain.add_block(block2) is True
     assert blockchain.head == block2
-    assert blockchain.getBlock(block2.hash).height == 2
+    assert blockchain.get_block(block2.hash).height == 2
 
-    assert blockchain.addBlock(block3) == True
+    assert blockchain.add_block(block3) is True
     assert blockchain.head == block3
-    assert blockchain.getBlock(block3.hash).height == 3
+    assert blockchain.get_block(block3.hash).height == 3
 
-    assert blockchain.addBlock(block4) == False
+    assert blockchain.add_block(block4) is False
     assert blockchain.head == block3
 
     assert blockchain.genesis == genesis
-    assert blockchain.getBlock(block4.hash) == None
+    assert blockchain.get_block(block4.hash) is None
 
 
-def test_Blockchain_addBlock_wrong_order_scenario():
+def test_Blockchain_add_block_wrong_order_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -75,29 +75,29 @@ def test_Blockchain_addBlock_wrong_order_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block("uknown hash", "agent0", [])
 
-    assert blockchain.addBlock(block3) == False
+    assert blockchain.add_block(block3) is False
     assert blockchain.head == genesis
 
-    assert blockchain.addBlock(block2) == False
+    assert blockchain.add_block(block2) is False
     assert blockchain.head == genesis
 
-    assert blockchain.addBlock(block1) == True
+    assert blockchain.add_block(block1) is True
     assert blockchain.head == block3
 
-    assert blockchain.getBlock(block1.hash).height == 1
-    assert blockchain.getBlock(block2.hash).height == 2
-    assert blockchain.getBlock(block3.hash).height == 3
+    assert blockchain.get_block(block1.hash).height == 1
+    assert blockchain.get_block(block2.hash).height == 2
+    assert blockchain.get_block(block3.hash).height == 3
 
-    assert blockchain.addBlock(block4) == False
-    assert blockchain.getBlock(block4.hash) == None
+    assert blockchain.add_block(block4) is False
+    assert blockchain.get_block(block4.hash) is None
 
     assert blockchain.genesis == genesis
 
-    for key in blockchain._stagingBlocks:
+    for key in blockchain._staging_blocks:
         assert key == "uknown hash"
 
 
-def test_Blockchain_addBlock_fork_scenario():
+def test_Blockchain_add_block_fork_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -108,25 +108,25 @@ def test_Blockchain_addBlock_fork_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block(block2.hash, "agent1", [])
 
-    assert blockchain.addBlock(block1) == True
+    assert blockchain.add_block(block1) is True
     assert blockchain.head == block1
 
-    assert blockchain.addBlock(block2) == True
+    assert blockchain.add_block(block2) is True
     assert blockchain.head == block2
 
-    assert blockchain.addBlock(block3) == True
+    assert blockchain.add_block(block3) is True
     assert blockchain.head == block3
 
-    assert blockchain.addBlock(block4) == True
+    assert blockchain.add_block(block4) is True
     assert blockchain.head == block3 or blockchain.head == block4
 
     assert blockchain.genesis == genesis
     assert block3.height == block4.height == 3
 
-    assert len(blockchain._stagingBlocks.keys()) == 0
+    assert len(blockchain._staging_blocks.keys()) == 0
 
 
-def test_Blockchain_addBlock_fork_wrong_order_scenario():
+def test_Blockchain_add_block_fork_wrong_order_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -136,19 +136,19 @@ def test_Blockchain_addBlock_fork_wrong_order_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block(block2.hash, "agent1", [])
 
-    assert blockchain.addBlock(block4) == False
+    assert blockchain.add_block(block4) is False
     assert blockchain.head == genesis
 
-    assert blockchain.addBlock(block3) == False
+    assert blockchain.add_block(block3) is False
     assert blockchain.head == genesis
 
-    assert blockchain.addBlock(block1) == True
+    assert blockchain.add_block(block1) is True
     assert blockchain.head == block1
 
-    assert blockchain.addBlock(block2) == True
+    assert blockchain.add_block(block2) is True
     assert blockchain.head == block3 or blockchain.head == block4
 
     assert blockchain.genesis == genesis
     assert block3.height == block4.height == 3
 
-    assert len(blockchain._stagingBlocks.keys()) == 0
+    assert len(blockchain._staging_blocks.keys()) == 0

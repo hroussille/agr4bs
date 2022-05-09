@@ -7,7 +7,7 @@ class GroupManagerStateChange(StateChange):
     def __init__(self) -> None:
         super().__init__()
 
-        self.groupEnteringPolicy = None
+        self.group_entering_policy = None
 
 
 class GroupManager(Role):
@@ -16,7 +16,7 @@ class GroupManager(Role):
         super().__init__(RoleType.GROUP_MANAGER)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return GroupManagerStateChange()
 
     @staticmethod

@@ -2,46 +2,47 @@ import agr4bs
 from agr4bs.Role import RoleType
 
 
-def test_blockchainMaintainerType():
+def test_BlockchainMaintainer_type():
     role = agr4bs.Roles.BlockchainMaintainer()
     assert role.type == agr4bs.RoleType.BLOCKCHAIN_MAINTAINER
 
 
-def test_blockchainMaintainerBehaviors():
+def test_BlockchainMaintainer_behaviors():
     role = agr4bs.Roles.BlockchainMaintainer()
 
-    assert 'appendBlock' in role.behaviors
-    assert 'executeTransaction' in role.behaviors
-    assert 'validateBlock' in role.behaviors
-    assert 'validateTransaction' in role.behaviors
-    assert 'storeTransaction' in role.behaviors
+    assert 'append_block' in role.behaviors
+    assert 'execute_transaction' in role.behaviors
+    assert 'validate_block' in role.behaviors
+    assert 'validate_transaction' in role.behaviors
+    assert 'store_transaction' in role.behaviors
+    assert 'state_change' not in role.behaviors
 
 
-def test_blockchainMaintainerAddition():
+def test_BlockchainMaintainer_addition():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.BlockchainMaintainer()
-    agent.addRole(role)
+    agent.add_role(role)
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior)
+        assert agent.has_behavior(behavior)
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change in agent.state
 
-    assert agent.getRole(RoleType.BLOCKCHAIN_MAINTAINER) == role
+    assert agent.get_role(RoleType.BLOCKCHAIN_MAINTAINER) == role
 
 
-def test_blockchainMaintainerRemoval():
+def test_BlockchainMaintainer_removal():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.BlockchainMaintainer()
 
-    agent.addRole(role)
-    agent.removeRole(role)
+    agent.add_role(role)
+    agent.remove_role(role)
 
-    assert agent.hasRole(RoleType.BLOCKCHAIN_MAINTAINER) == False
+    assert agent.has_role(RoleType.BLOCKCHAIN_MAINTAINER) is False
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior) == False
+        assert agent.has_behavior(behavior) is False
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange not in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change not in agent.state

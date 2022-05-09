@@ -9,24 +9,38 @@ class Blockchain(object):
         self._genesis = genesis
         self._head = self._genesis
         self._blocks = {}
-        self._stagingBlocks = {}
+        self._staging_blocks = {}
         self._blocks[genesis.hash] = genesis
         # TODO: add an internal nonce to avoid hash conflich when similar data are contained ?
 
-    def getBlock(self, hash: str) -> Block:
+    def get_block(self, hash: str) -> Block:
         if hash in self._blocks:
             return self._blocks[hash]
         return None
 
-    def getChain(self) -> list[Block]:
+    def get_chain(self) -> list[Block]:
         chain = deque()
         current = self._head
 
-        while current != None:
+        while current is not None:
             chain.appendleft(current)
-            current = self._blocks[current.parent]
+            current = self._blocks[current.parent_hash]
 
         return list(chain)
+
+    def is_block_on_main_chain(self, block) -> bool:
+
+        if self.get_block(block.hash) is None:
+            return False
+
+        current = self._head
+
+        while current is not None:
+            if current.hash == block.hash:
+                return True
+            current = self.get_block(current.parent_hash)
+
+        return False
 
     @property
     def genesis(self) -> Block:
@@ -36,26 +50,26 @@ class Blockchain(object):
     def head(self) -> Block:
         return self._head
 
-    def _unstageBlocks(self, block: Block) -> list[Block]:
+    def _unstage_blocks(self, block: Block) -> list[Block]:
         dependencies = [block]
-        allUnstaged = []
+        all_unstaged = []
 
         while len(dependencies) > 0:
-            newDependencies = []
+            new_dependencies = []
             for dependency in dependencies:
-                if dependency.hash in self._stagingBlocks:
+                if dependency.hash in self._staging_blocks:
                     unstaged = [
-                        stagedBlock for stagedBlock in self._stagingBlocks[dependency.hash]]
-                    newDependencies = [*newDependencies, *unstaged]
-                    del self._stagingBlocks[dependency.hash]
-                    allUnstaged = [*allUnstaged, *unstaged]
+                        stagedBlock for stagedBlock in self._staging_blocks[dependency.hash]]
+                    new_dependencies = [*new_dependencies, *unstaged]
+                    del self._staging_blocks[dependency.hash]
+                    all_unstaged = [*all_unstaged, *unstaged]
 
-            dependencies = newDependencies
+            dependencies = new_dependencies
 
-        return list(allUnstaged)
+        return list(all_unstaged)
 
-    def _forkRule(self, block: Block):
-        """ If block height is higher than head it becomes the new head 
+    def _fork_rule(self, block: Block):
+        """ If block height is higher than head it becomes the new head
             Else If block height is equal to head height : random choice
             Otherwise head is left unchanged
         """
@@ -66,22 +80,22 @@ class Blockchain(object):
             if random.random() > 0.5:
                 self._head = block
 
-    def addBlockStrict(self, block: Block):
+    def add_block_strict(self, block: Block):
         """ Do nothing if the block is already known """
         if block.hash in self._blocks:
             return False
 
         """ Strict mode : do nothing if parent is uknown """
-        if block.parentHash not in self._blocks:
+        if block.parent_hash not in self._blocks:
             return False
 
-        block.height = self._blocks[block.parentHash].height + 1
+        block.height = self._blocks[block.parent_hash].height + 1
         self._blocks[block.hash] = block
-        self._forkRule(block)
+        self._fork_rule(block)
 
         return True
 
-    def addBlock(self, block: Block) -> bool:
+    def add_block(self, block: Block) -> bool:
         """ Attempt to add a block to the blockchain
         """
 
@@ -90,21 +104,19 @@ class Blockchain(object):
             return False
 
         """ Uknown parent : this may happen due to network delay / loss """
-        if block.parentHash not in self._blocks:
-            if block.parentHash not in self._stagingBlocks:
-                self._stagingBlocks[block.parentHash] = [block]
+        if block.parent_hash not in self._blocks:
+            if block.parent_hash not in self._staging_blocks:
+                self._staging_blocks[block.parent_hash] = [block]
             else:
-                self._stagingBlocks[block.parentHash].append(block)
+                self._staging_blocks[block.parent_hash].append(block)
             return False
 
-        block.height = self._blocks[block.parentHash].height + 1
+        block.height = self._blocks[block.parent_hash].height + 1
         self._blocks[block.hash] = block
-        self._forkRule(block)
+        self._fork_rule(block)
 
-        for dependentBlock in self._unstageBlocks(block):
-            print(dependentBlock.hash)
-            print(dependentBlock)
-            if self.addBlockStrict(dependentBlock) is not True:
+        for dependent_block in self._unstage_blocks(block):
+            if self.add_block_strict(dependent_block) is not True:
                 raise ValueError("Chain is corrupted.")
 
         return True

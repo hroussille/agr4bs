@@ -2,45 +2,46 @@ import agr4bs
 from agr4bs.Role import RoleType
 
 
-def test_transactionProposerType():
+def test_TransactionProposer_type():
     role = agr4bs.Roles.TransactionProposer()
     assert role.type == agr4bs.RoleType.TRANSACTION_PROPOSER
 
 
-def test_transactionProposerBehaviors():
+def test_TransactionProposer_behaviors():
     role = agr4bs.Roles.TransactionProposer()
 
-    assert 'createTransaction' in role.behaviors
-    assert 'proposeTransaction' in role.behaviors
+    assert 'create_transaction' in role.behaviors
+    assert 'propose_transaction' in role.behaviors
+    assert 'state_change' not in role.behaviors
 
 
-def test_transactionProposerAddition():
+def test_TransactionProposer_addition():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.TransactionProposer()
-    agent.addRole(role)
+    agent.add_role(role)
 
-    assert agent.hasRole(RoleType.TRANSACTION_PROPOSER)
+    assert agent.has_role(RoleType.TRANSACTION_PROPOSER)
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior)
+        assert agent.has_behavior(behavior)
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change in agent.state
 
-    assert agent.getRole(RoleType.TRANSACTION_PROPOSER) == role
+    assert agent.get_role(RoleType.TRANSACTION_PROPOSER) == role
 
 
-def test_transactionProposerRemoval():
+def test_TransactionProposer_removal():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.TransactionProposer()
 
-    agent.addRole(role)
-    agent.removeRole(role)
+    agent.add_role(role)
+    agent.remove_role(role)
 
-    assert agent.hasRole(RoleType.TRANSACTION_PROPOSER) == False
+    assert agent.has_role(RoleType.TRANSACTION_PROPOSER) is False
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior) == False
+        assert agent.has_behavior(behavior) is False
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange not in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change not in agent.state

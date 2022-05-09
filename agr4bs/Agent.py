@@ -39,7 +39,7 @@ class Agent(object):
     def state(self):
         return self._state
 
-    def hasRole(self, role: 'RoleType') -> bool:
+    def has_role(self, role: 'RoleType') -> bool:
         """ Check whether the agent has a specific Role
 
             :param role: the role to check for
@@ -49,10 +49,10 @@ class Agent(object):
         """
         return role in self._roles
 
-    def hasBehavior(self, behavior: str) -> bool:
+    def has_behavior(self, behavior: str) -> bool:
         return hasattr(self, behavior)
 
-    def addRole(self, role: 'Role') -> bool:
+    def add_role(self, role: 'Role') -> bool:
         """ Add a specific role to the agent
 
             :param role: the role to add
@@ -60,18 +60,18 @@ class Agent(object):
             :returns: wether the role was added or not
             :rtype: bool
         """
-        if self.hasRole(role.type):
+        if self.has_role(role.type):
             return False
 
         self._roles[role.type] = role
-        self._state |= role.stateChange().mount()
+        self._state |= role.state_change().mount()
 
         for behavior, implementation in role.behaviors.items():
             setattr(self, behavior, implementation)
 
         return True
 
-    def removeRole(self, role: 'Role') -> bool:
+    def remove_role(self, role: 'Role') -> bool:
         """ Remove a specific role from the agent
 
             :param role: the role to remove
@@ -79,20 +79,20 @@ class Agent(object):
             :returns: wether the role was removed or not
             :rtype: bool
         """
-        if not(self.hasRole(role.type)):
+        if not(self.has_role(role.type)):
             return False
 
         for behavior in role.behaviors:
             delattr(self, behavior)
 
-        for stateProperty in role.stateChange().unmount():
-            del self._state[stateProperty]
+        for state_property in role.state_change().unmount():
+            del self._state[state_property]
 
         del self._roles[role.type]
 
         return True
 
-    def getRole(self, roleType: 'RoleType') -> 'Role':
+    def get_role(self, roleType: 'RoleType') -> 'Role':
         """ Get a specific Role instance from the Agent
 
             :param roleType: the role type to get
@@ -100,7 +100,7 @@ class Agent(object):
             :returns: the role instance or None
             :rtype: Role
         """
-        if not(self.hasRole(roleType)):
+        if not(self.has_role(roleType)):
             return None
 
         return self._roles[roleType]

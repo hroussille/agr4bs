@@ -2,43 +2,45 @@ import agr4bs
 from agr4bs.Role import RoleType
 
 
-def test_transactionEndorserType():
+def test_TransactionEndorser_type():
     role = agr4bs.Roles.TransactionEndorser()
     assert role.type == agr4bs.RoleType.TRANSACTION_ENDORSER
 
 
-def test_transactionEndorserBehaviors():
+def test_TransactionEndorser_behaviors():
     role = agr4bs.Roles.TransactionEndorser()
-    assert 'endorseTransaction' in role.behaviors
+
+    assert 'endorse_transaction' in role.behaviors
+    assert 'state_change' not in role.behaviors
 
 
-def test_transactionEndorserAddition():
+def test_TransactionEndorser_addition():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.TransactionEndorser()
-    agent.addRole(role)
+    agent.add_role(role)
 
-    assert agent.hasRole(RoleType.TRANSACTION_ENDORSER)
+    assert agent.has_role(RoleType.TRANSACTION_ENDORSER)
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior)
+        assert agent.has_behavior(behavior)
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change in agent.state
 
-    assert agent.getRole(RoleType.TRANSACTION_ENDORSER) == role
+    assert agent.get_role(RoleType.TRANSACTION_ENDORSER) == role
 
 
-def test_blockEndorserRemoval():
+def test_TransactionEndorser_removal():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.TransactionEndorser()
 
-    agent.addRole(role)
-    agent.removeRole(role)
+    agent.add_role(role)
+    agent.remove_role(role)
 
-    assert agent.hasRole(RoleType.TRANSACTION_ENDORSER) == False
+    assert agent.has_role(RoleType.TRANSACTION_ENDORSER) is False
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior) == False
+        assert agent.has_behavior(behavior) is False
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange not in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change not in agent.state

@@ -2,43 +2,45 @@ import agr4bs
 from agr4bs.Role import RoleType
 
 
-def test_groupManagerType():
+def test_GroupManager_type():
     role = agr4bs.Roles.GroupManager()
     assert role.type == agr4bs.RoleType.GROUP_MANAGER
 
 
-def test_blockEndorserBehaviors():
+def test_GroupManager_behaviors():
     role = agr4bs.Roles.GroupManager()
+
     assert 'authorize' in role.behaviors
+    assert 'state_change' not in role.behaviors
 
 
-def test_groupManagerAddition():
+def test_GroupManager_addition():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.GroupManager()
-    agent.addRole(role)
+    agent.add_role(role)
 
-    assert agent.hasRole(RoleType.GROUP_MANAGER)
+    assert agent.has_role(RoleType.GROUP_MANAGER)
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior)
+        assert agent.has_behavior(behavior)
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change in agent.state
 
-    assert agent.getRole(RoleType.GROUP_MANAGER) == role
+    assert agent.get_role(RoleType.GROUP_MANAGER) == role
 
 
-def test_groupManagerRemoval():
+def test_GroupManager_removal():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.GroupManager()
 
-    agent.addRole(role)
-    agent.removeRole(role)
+    agent.add_role(role)
+    agent.remove_role(role)
 
-    assert agent.hasRole(RoleType.GROUP_MANAGER) == False
+    assert agent.has_role(RoleType.GROUP_MANAGER) is False
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior) == False
+        assert agent.has_behavior(behavior) is False
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange not in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change not in agent.state

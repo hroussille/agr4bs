@@ -15,11 +15,11 @@ class TransactionProposer(Role):
         super().__init__(RoleType.TRANSACTION_PROPOSER)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return TransactionProposerStateChange()
 
     @staticmethod
-    def createTransaction(agent: Agent, paylaod: Payload, receiver: Agent) -> Transaction:
+    def create_transaction(agent: Agent, paylaod: Payload, receiver: Agent) -> Transaction:
         """ Create a transaction with the given payload for the given receiver
 
             :param agent: the agent on which the behavior operates
@@ -32,7 +32,7 @@ class TransactionProposer(Role):
         raise NotImplementedError
 
     @staticmethod
-    def proposeTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> None:
+    def propose_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> None:
         """ Propose a transaction to the network
 
             :param agent: the agent on which the behavior operates

@@ -9,7 +9,7 @@ class BindBlackListMeta(EnumMeta):
 
 
 class BindBlackList(Enum, metaclass=BindBlackListMeta):
-    STATE_CHANGE = "stateChange"
+    STATE_CHANGE = "state_change"
 
 
 class RoleType(Enum):
@@ -31,7 +31,7 @@ class Role:
         self._type = type
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return StateChange()
 
     @property

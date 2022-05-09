@@ -17,11 +17,11 @@ class BlockchainMaintainer(Role):
         super().__init__(RoleType.BLOCKCHAIN_MAINTAINER)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return BlockchainMaintainerStateChange()
 
     @staticmethod
-    def validateTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
+    def validate_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Validate a specific transaction
 
             :param agent: the agent on which the behavior operates
@@ -34,7 +34,7 @@ class BlockchainMaintainer(Role):
         raise NotImplementedError
 
     @staticmethod
-    def validateBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
+    def validate_block(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Validate a specific Block
 
             :param agent: the agent on which the behavior operates
@@ -47,7 +47,7 @@ class BlockchainMaintainer(Role):
         raise NotImplementedError
 
     @staticmethod
-    def storeTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
+    def store_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Store a specific transaction
 
             :param agent: the agent on which the behavior operates
@@ -60,7 +60,7 @@ class BlockchainMaintainer(Role):
         raise NotImplementedError
 
     @staticmethod
-    def appendBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
+    def append_block(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Append a specific block to the local blockchain
 
             :param agent: the agent on which the behavior operates
@@ -73,7 +73,7 @@ class BlockchainMaintainer(Role):
         raise NotImplementedError
 
     @staticmethod
-    def executeTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
+    def execute_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Execute a specific transaction
 
             :param transaction: the transaction to execute

@@ -2,45 +2,47 @@ import agr4bs
 from agr4bs.Role import RoleType
 
 
-def test_investorType():
+def test_Investor_type():
     role = agr4bs.Roles.Investor()
     assert role.type == agr4bs.RoleType.INVESTOR
 
 
-def test_investorBehaviors():
+def test_Investor_behaviors():
     role = agr4bs.Roles.Investor()
-    assert 'specifyInvestment' in role.behaviors
+
+    assert 'specify_investment' in role.behaviors
     assert 'invest' in role.behaviors
     assert 'withdraw' in role.behaviors
+    assert 'state_change' not in role.behaviors
 
 
-def test_investorAddition():
+def test_Investor_addition():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.Investor()
-    agent.addRole(role)
+    agent.add_role(role)
 
-    assert agent.hasRole(RoleType.INVESTOR)
+    assert agent.has_role(RoleType.INVESTOR)
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior)
+        assert agent.has_behavior(behavior)
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change in agent.state
 
-    assert agent.getRole(RoleType.INVESTOR) == role
+    assert agent.get_role(RoleType.INVESTOR) == role
 
 
-def test_investorRemoval():
+def test_Investor_removal():
     agent = agr4bs.Agent("agent_0")
     role = agr4bs.Roles.Investor()
 
-    agent.addRole(role)
-    agent.removeRole(role)
+    agent.add_role(role)
+    agent.remove_role(role)
 
-    assert agent.hasRole(RoleType.INVESTOR) == False
+    assert agent.has_role(RoleType.INVESTOR) is False
 
     for behavior in role.behaviors:
-        assert agent.hasBehavior(behavior) == False
+        assert agent.has_behavior(behavior) is False
 
-    for stateChange in role.stateChange().mount():
-        assert stateChange not in agent.state
+    for state_change in role.state_change().mount():
+        assert state_change not in agent.state

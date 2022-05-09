@@ -8,10 +8,10 @@ class TransactionEndorserStateChange(StateChange):
     def __init__(self) -> None:
         super().__init__()
 
-        def _transactionEndorsementStrategy():
+        def _transaction_endorsement_strategy():
             return True
 
-        self.transactionEndorsementStrategy = _transactionEndorsementStrategy
+        self.transaction_endorsement_strategy = _transaction_endorsement_strategy
 
 
 class TransactionEndorser(Role):
@@ -24,7 +24,7 @@ class TransactionEndorser(Role):
         return TransactionEndorserStateChange()
 
     @staticmethod
-    def endorseTransaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
+    def endorse_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Endorse a specific transaction
 
             :param agent: the agent on which the behavior operates

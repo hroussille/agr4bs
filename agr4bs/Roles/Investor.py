@@ -8,7 +8,7 @@ class InvestorStateChange(StateChange):
     def __init__(self) -> None:
         super().__init__()
 
-        self.investmentStrategy = None
+        self.investment_strategy = None
 
 
 class Investor(Role):
@@ -21,7 +21,7 @@ class Investor(Role):
         return InvestorStateChange()
 
     @staticmethod
-    def specifyInvestment(agent: Agent, *args, **kwargs) -> Investment:
+    def specify_investment(agent: Agent, *args, **kwargs) -> Investment:
         """ Specify an investment according to the current investment policy
 
             :param agent: the agent on which the behavior operates

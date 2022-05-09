@@ -8,10 +8,10 @@ class BlockEndorserStateChange(StateChange):
     def __init__(self) -> None:
         super().__init__()
 
-        def _blockEndorsementStrategy():
+        def _block_endorsement_strategy():
             return True
 
-        self.blockEndorsementStrategy = _blockEndorsementStrategy
+        self.block_endorsement_strategy = _block_endorsement_strategy
 
 
 class BlockEndorser(Role):
@@ -20,11 +20,11 @@ class BlockEndorser(Role):
         super().__init__(RoleType.BLOCK_ENDORSER)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return BlockEndorserStateChange()
 
     @staticmethod
-    def endorseBlock(agent: Agent, block: Block, *args, **kwargs) -> bool:
+    def endorse_block(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Endorse a specific block
 
             :param agent: the agent on which the behavior operates

@@ -10,7 +10,7 @@ class GroupType:
 class Group:
 
     def __init__(self, name: str, type: GroupType) -> None:
-        """ Initializes the Group interface 
+        """ Initializes the Group interface
 
             :param name: the name of the group
             :type name: str
@@ -21,7 +21,7 @@ class Group:
         self.type = type
         self.members = {}
 
-    def hasMember(self, agent: Agent) -> bool:
+    def has_member(self, agent: Agent) -> bool:
         """ Check whether a specific agent is part of the group
 
             :param agent: the agent to check membership for
@@ -31,7 +31,7 @@ class Group:
         """
         return agent in self.members
 
-    def addMember(self, agent: Agent) -> bool:
+    def add_member(self, agent: Agent) -> bool:
         """ Add a specific agent to the group
 
             :param agent: the agent to add to the group
@@ -39,20 +39,20 @@ class Group:
             :returns: wether the agent was added to the group or not
             :rtype: bool
         """
-        if not(self.hasMember(agent)):
+        if not(self.has_member(agent)):
             self.members[agent] = agent
             return True
         return False
 
-    def removeMember(self, agent: Agent) -> bool:
+    def remove_member(self, agent: Agent) -> bool:
         """ Remove a specific agent from the group
 
             :param agent: the agent to remove from the group
             :type agent: Agent
             :returns: wether the agent was removed from the group or not
-            :rtype bool 
+            :rtype bool
         """
-        if self.has(agent):
+        if self.has_member(agent):
             self.members[agent] = None
             return True
         return False

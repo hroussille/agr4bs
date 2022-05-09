@@ -14,5 +14,5 @@ class Oracle(Role):
         super().__init__(RoleType.ORACLE)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return OracleStateChange()

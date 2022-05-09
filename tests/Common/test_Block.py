@@ -6,7 +6,7 @@ def test_Block_properties():
     tx = Transaction("agent0", "agent1", amount=1000, fee=1)
     block = Block("genesis", "agent0", [tx])
 
-    assert block.parentHash == "genesis"
+    assert block.parent_hash == "genesis"
     assert block.creator == "agent0"
     assert block.transactions == [tx]
     assert block.height == 0
@@ -18,12 +18,12 @@ def test_Block_properties():
         excinfo.value)
 
 
-def test_Block_totalFees():
+def test_Block_total_fees():
     tx1 = Transaction("agent0", "agent1", amount=1000, fee=1)
     tx2 = Transaction("agent0", "agent1", amount=1000, fee=1)
     block = Block("genesis", "agent0", [tx1, tx2])
 
-    assert block.totalFees == 2
+    assert block.total_fees == 2
 
 
 def test_Block_hash():

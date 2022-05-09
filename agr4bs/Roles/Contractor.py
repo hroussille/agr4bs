@@ -14,5 +14,5 @@ class Contractor(Role):
         super().__init__(RoleType.CONTRACTOR)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return ContractorStateChange()

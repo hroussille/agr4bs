@@ -10,20 +10,20 @@ class Environment(object):
 
     def __init__(self, network: Network = None, initial_state: dict = None) -> None:
 
-        if initial_state == None:
+        if initial_state is None:
             initial_state = {}
 
-        if network == None:
+        if network is None:
             network = Network()
 
         self.network = network
         self.agents = {}
-        self.setInitialState(initial_state)
+        self.set_initial_state(initial_state)
 
-    def setInitialState(self, initial_state: dict):
+    def set_initial_state(self, initial_state: dict):
         self._initial_state = initial_state
 
-    def addAgent(self, agent: Agent):
+    def add_agent(self, agent: Agent):
 
         if self.agents[agent.name] is not None:
             raise ValueError(
@@ -31,11 +31,11 @@ class Environment(object):
 
         self.agents[agent.name] = agent
 
-    def removeAgent(self, agent: Agent):
+    def remove_agent(self, agent: Agent):
 
         if self.agents[agent.name] is None:
             raise ValueError(
                 "Attempting to remove a non existing agent from the environment")
 
-        self.network.flushAgent(agent)
+        self.network.flush_agent(agent)
         del self.agents[agent.name]
