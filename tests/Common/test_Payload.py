@@ -14,7 +14,6 @@ def test_Payload_data_type():
     with pytest.raises(TypeError) as excinfo:
         payload = Payload(1)
 
-    print(excinfo.value)
     assert "Invalid Payload data type. Got <class 'int'> expected str" in str(
         excinfo.value)
 
