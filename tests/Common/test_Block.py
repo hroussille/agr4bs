@@ -1,3 +1,4 @@
+import pytest
 from agr4bs.Common import Transaction, Block
 
 
@@ -8,6 +9,13 @@ def test_Block_properties():
     assert block.parentHash == "genesis"
     assert block.creator == "agent0"
     assert block.transactions == [tx]
+    assert block.height == 0
+
+    with pytest.raises(ValueError) as excinfo:
+        block.height = -1
+
+    assert "Block height cannot be negative" in str(
+        excinfo.value)
 
 
 def test_Block_totalFees():

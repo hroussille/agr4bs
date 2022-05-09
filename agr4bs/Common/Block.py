@@ -11,6 +11,7 @@ class Block(object):
         self._creator = creator
         self._hash = self.computeHash()
         self._totalFees = sum(map(lambda tx: tx.fee, self._transactions))
+        self._height = 0
 
     @property
     def parentHash(self) -> "str":
@@ -42,7 +43,7 @@ class Block(object):
         if newHeight < 0:
             raise ValueError("Block height cannot be negative")
 
-        self._heght = newHeight
+        self._height = newHeight
 
     def __str__(self) -> str:
         return self.serialize()
