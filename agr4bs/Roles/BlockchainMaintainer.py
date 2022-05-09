@@ -9,7 +9,6 @@ class BlockchainMaintainerStateChange(StateChange):
         super().__init__()
 
         self.txpool = {}
-        self.blockchain = {}
 
 
 class BlockchainMaintainer(Role):
