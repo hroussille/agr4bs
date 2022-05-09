@@ -24,10 +24,11 @@ class Payload(object):
 
 class Transaction(object):
 
-    def __init__(self, origin: str, destination: str, amount: int, payload: Payload = None) -> None:
+    def __init__(self, origin: str, destination: str, amount: int = 0, fee: int = 0, payload: Payload = None) -> None:
         self._origin = origin
         self._destination = destination
         self._amount = amount
+        self._fee = fee
 
         if payload is None:
             payload = Payload()
@@ -43,8 +44,12 @@ class Transaction(object):
         return self._destination
 
     @property
-    def amount(self) -> str:
+    def amount(self) -> int:
         return self._amount
+
+    @property
+    def fee(self) -> int:
+        return self._fee
 
     @property
     def payload(self) -> Payload:
@@ -54,4 +59,4 @@ class Transaction(object):
         return self.serialize()
 
     def serialize(self) -> str:
-        return "{{ {} - {} - {} - {} }}".format(self._origin, self._destination, str(self.amount).zfill(10), self._payload.serialize())
+        return "{{ from: {} - to: {} - fee: {} - amount: {} - payload: {} }}".format(self._origin, self._destination, str(self.fee).zfill(10), str(self.amount).zfill(10), self._payload.serialize())

@@ -3,26 +3,32 @@ from agr4bs.Common import Transaction, Payload
 
 def test_tx_no_payload():
 
-    tx = Transaction("agent0", "agent1", 1000)
+    tx = Transaction("agent0", "agent1", amount=1000, fee=1)
     assert tx.origin == "agent0"
     assert tx.destination == "agent1"
     assert tx.amount == 1000
-    assert tx.serialize() == "{ agent0 - agent1 - 0000001000 -  }"
+
+    print(tx.serialize())
+    assert tx.serialize(
+    ) == "{ from: agent0 - to: agent1 - fee: 0000000001 - amount: 0000001000 - payload:  }"
 
 
 def test_tx_with_empty_payload():
 
-    tx = Transaction("agent0", "agent1", 1000, Payload())
+    tx = Transaction("agent0", "agent1", amount=1000, fee=1, payload=Payload())
     assert tx.origin == "agent0"
     assert tx.destination == "agent1"
     assert tx.amount == 1000
-    assert tx.serialize() == "{ agent0 - agent1 - 0000001000 -  }"
+    assert tx.serialize(
+    ) == "{ from: agent0 - to: agent1 - fee: 0000000001 - amount: 0000001000 - payload:  }"
 
 
 def test_tx_with_payload():
 
-    tx = Transaction("agent0", "agent1", 1000, Payload("deadbeef"))
+    tx = Transaction("agent0", "agent1",  amount=1000,
+                     fee=1, payload=Payload("deadbeef"))
     assert tx.origin == "agent0"
     assert tx.destination == "agent1"
     assert tx.amount == 1000
-    assert tx.serialize() == "{ agent0 - agent1 - 0000001000 - deadbeef }"
+    assert tx.serialize(
+    ) == "{ from: agent0 - to: agent1 - fee: 0000000001 - amount: 0000001000 - payload: deadbeef }"
