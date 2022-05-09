@@ -3,6 +3,5 @@
   "python.linting.pycodestyleEnabled": true,
   "python.linting.pycodestyleArgs": [
     "--ignore=E501"
-  ],
-  "python.linting.flake8Enabled": false,
+  ]
 }
