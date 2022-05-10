@@ -1,21 +1,29 @@
-"""
-    Transaction file class implementation
-"""
+class Payload(object):
 
-from .payload import Payload
+    def __init__(self, data: str = None):
+
+        if data is None:
+            data = ""
+
+        if type(data) is not str:
+            raise TypeError(
+                "Invalid Payload data type. Got {} expected str".format(type(data)))
+
+        self._data = data
+
+    @property
+    def data(self) -> str:
+        return self._data
+
+    def serialize(self) -> str:
+        return self._data
+
+    def __str__(self) -> str:
+        return self.serialize()
 
 
-class Transaction():
+class Transaction(object):
 
-    """
-        Transaction class implementation :
-
-        A Transaction is essentially a transfer from one Agent to another.
-        it may be used to send currency, or to trigger arbitrary logic if
-        it targets a smart contract Agent.
-    """
-
-    #pylint: disable=too-many-arguments
     def __init__(self, origin: str, to: str, amount: int = 0, fee: int = 0, payload: Payload = None) -> None:
         self._origin = origin
         self._to = to
@@ -29,56 +37,26 @@ class Transaction():
 
     @property
     def origin(self) -> str:
-        """ Get the name of the Agent at the origin of the Transaction
-
-            :returns: the name of the Agent that sent the Transaction
-            :rtype: str
-        """
         return self._origin
 
     @property
     def to(self) -> str:
-        """ Get the name of the Agent recipient of the Transaction
-
-            :returns: the name of the Agent recipent of the Transaction
-            :rtype: str
-        """
         return self._to
 
     @property
     def amount(self) -> int:
-        """ Get the amount sent within the Transaction
-
-            :returns: the amount sent within the Transaction
-            :rtype: int
-        """
         return self._amount
 
     @property
     def fee(self) -> int:
-        """ Get the fee sent alongside the Transaction
-
-            :returns: the fee sent alongside the Transaction
-            :rtype: int
-        """
         return self._fee
 
     @property
     def payload(self) -> Payload:
-        """ Get the Payload (i.e., data) sent within the Transaction
-
-            :returns: the Payload within the Transaction
-            :rtype: Payload
-        """
         return self._payload
 
     def __str__(self) -> str:
         return self.serialize()
 
     def serialize(self) -> str:
-        """ Serialize the Transaction
-
-            :returns: the serialized Transaction
-            :rtype: str
-        """
-        return f'{{ from: {self._origin} - to: {self._to} - fee: {str(self.fee).zfill(10)} - amount: {str(self.amount).zfill(10)} - payload: {self._payload.serialize()} }}'
+        return "{{ from: {} - to: {} - fee: {} - amount: {} - payload: {} }}".format(self._origin, self._to, str(self.fee).zfill(10), str(self.amount).zfill(10), self._payload.serialize())

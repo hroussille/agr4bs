@@ -1,50 +1,18 @@
-
-"""
-Abstract implementation of the BlockProposer role as per AGR4BS
-
-BlockProposerStateChange:
-
-The BlockProposerStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
-
-BlockProposer:
-
-The BlockProposer implementation which MUST contain the following behaviors :
-- select_transaction
-- create_block
-- propose_block
-"""
-
-from ..agent import Agent, StateChange
-from ..role import Role, RoleType
-from ..common import Transaction
-from ..common import Block
+from ..Agent import Agent, StateChange
+from ..Role import Role, RoleType
+from ..Common import Transaction
+from ..Common import Block
 
 
 class BlockProposerStateChange(StateChange):
-    """
-        State changes that need to be made to the Agent when
-        the associated Role (BlockProposer) is either
-        mounted or unmounted.
-    """
 
     def __init__(self) -> None:
+        super().__init__()
 
         self.transaction_selection_strategy = None
 
 
 class BlockProposer(Role):
-
-    """
-        Implementation of the BlockProposer Role which must
-        expose the following behaviors :
-        - select_transaction
-        - create_block
-        - propose_block
-
-        This class MUST be inherited from and expanded to implement
-        the actual logic of it's behaviors.
-    """
 
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCK_PROPOSER)

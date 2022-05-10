@@ -1,54 +1,23 @@
-"""
-Abstract implementation of the Investor role as per AGR4BS
-
-InvestorStateChange:
-
-The InvestorStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
-
-Investor:
-
-The Investor implementation which MUST contain the following behaviors :
-- specify_investment
-- invest
-- withdraw
-
-"""
-
-from ..role import Role, RoleType
-from ..agent import Agent, StateChange
-from ..common import Investment
+from ..Role import Role, RoleType
+from ..Agent import Agent, StateChange
+from ..Common import Investment
 
 
 class InvestorStateChange(StateChange):
-    """
-        State changes that need to be made to the Agent when
-        the associated Role (Investor) is either
-        mounted or unmounted.
-    """
 
     def __init__(self) -> None:
+        super().__init__()
 
         self.investment_strategy = None
 
 
 class Investor(Role):
-    """
-       Implementation of the Investor Role which must
-        expose the following behaviors :
-        - specify_investment
-        - invest
-        - withdraw
-
-        This class MUST be inherited from and expanded to implement
-        the actual logic of it's behaviors.
-    """
 
     def __init__(self) -> None:
         super().__init__(RoleType.INVESTOR)
 
     @staticmethod
-    def state_change() -> StateChange:
+    def stateChange() -> StateChange:
         return InvestorStateChange()
 
     @staticmethod

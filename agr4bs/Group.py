@@ -1,35 +1,15 @@
-
-"""
-    Group file class implementation
-"""
-
+from .Agent import Agent
 from enum import Enum
-from .agent import Agent
 
 
-class GroupType(Enum):
-
-    """
-        Enumeration of all known Group types
-
-        Every Group should identify itself with a value contained
-        in this enumeration.
-    """
-
+class GroupType:
     INTEREST_GROUP = "INTEREST_GROUP"
     STRUCTURAL_GROUP = "STRUCTURAL_GROUP"
 
 
 class Group:
 
-    """
-        Group class implementation :
-
-        A Group is a collection of Agents working together towards
-        a common goal.
-    """
-
-    def __init__(self, name: str, _type: GroupType) -> None:
+    def __init__(self, name: str, type: GroupType) -> None:
         """ Initializes the Group interface
 
             :param name: the name of the group
@@ -38,7 +18,7 @@ class Group:
             :type type: GroupType
         """
         self.name = name
-        self.type = _type
+        self.type = type
         self.members = {}
 
     def has_member(self, agent: Agent) -> bool:
@@ -59,10 +39,9 @@ class Group:
             :returns: wether the agent was added to the group or not
             :rtype: bool
         """
-        if not self.has_member(agent):
+        if not(self.has_member(agent)):
             self.members[agent] = agent
             return True
-
         return False
 
     def remove_member(self, agent: Agent) -> bool:

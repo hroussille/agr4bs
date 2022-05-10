@@ -1,13 +1,10 @@
-"""
-    Wrapper module over the different Roles exising in AGR4BS.
-"""
-from .block_endorser import BlockEndorser
-from .block_proposer import BlockProposer
-from .blockchain_maintainer import BlockchainMaintainer
-from .contractor import Contractor
-from .group_manager import GroupManager
-from .investee import Investee
-from .investor import Investor
-from .oracle import Oracle
-from .transaction_endorser import TransactionEndorser
-from .transaction_proposer import TransactionProposer
+from .BlockchainMaintainer import BlockchainMaintainer as BlockchainMaintainer
+from .BlockEndorser import BlockEndorser as BlockEndorser
+from .BlockProposer import BlockProposer as BlockProposer
+from .Contractor import Contractor as Contractor
+from .GroupManager import GroupManager as GroupManager
+from .Investee import Investee as Investee
+from .Investor import Investor as Investor
+from .Oracle import Oracle as Oracle
+from .TransactionEndorser import TransactionEndorser as TransactionEndorser
+from .TransactionProposer import TransactionProposer as TransactionProposer

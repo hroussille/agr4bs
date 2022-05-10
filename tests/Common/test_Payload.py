@@ -1,36 +1,27 @@
-"""
-    Test suite for the Transaction class
-"""
-
+from typing import Type
 import pytest
-from agr4bs import Payload
+from agr4bs.Common import Payload
 
 
-def test_payload_data():
-    """
-        Test Payload data integrity
-    """
+def test_Payload_data():
+
     payload = Payload("deadbeef")
-    assert payload.data == "deadbeef"
+    assert(payload.data == "deadbeef")
 
 
-def test_payload_data_type():
-    """
-        Test Exception on invalid Payload data type
-    """
+def test_Payload_data_type():
+
     with pytest.raises(TypeError) as excinfo:
-        Payload(1)
+        payload = Payload(1)
 
     assert "Invalid Payload data type. Got <class 'int'> expected str" in str(
         excinfo.value)
 
 
-def test_payload_serialization():
-    """
-        Test Payload serialization
-    """
+def test_Payload_serialization():
+
     payload1 = Payload("deadbeef")
     payload2 = Payload("")
 
-    assert payload1.serialize() == "deadbeef"
-    assert payload2.serialize() == ""
+    assert(payload1.serialize() == "deadbeef")
+    assert(payload2.serialize() == "")

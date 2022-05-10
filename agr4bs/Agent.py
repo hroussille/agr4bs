@@ -1,42 +1,19 @@
-"""
-    Agent file class implementation
-"""
-
 from copy import deepcopy
 
 
-class StateChange():
+class StateChange(object):
 
-    """
-        State changes that need to be made to the Agent when
-        the associated Role is either
-        mounted or unmounted.
-    """
+    def __init__(self) -> None:
+        pass
 
     def mount(self) -> dict:
-        """
-            Returns the dictionary describing the keys that should be made available
-            in the agent state as well as their initial values.
-        """
         return self.__dict__
 
     def unmount(self) -> list:
-        """
-            Returns the list describing the keys that should be removed from the agent
-            state.
-        """
         return list(self.__dict__.keys())
 
 
-class Agent():
-
-    """
-        Agent class implementation :
-
-        An Agent is initially an empty shell with no behavior except the native ones.
-        It may take on one or several Roles, and expand its behaviors with the ones of
-        the Roles it endorsed.
-    """
+class Agent(object):
 
     def __init__(self, name: str, initial_state: dict = None) -> None:
         """ Initializes the Agent interface
@@ -55,21 +32,11 @@ class Agent():
         self._state = {} | deepcopy(initial_state)
 
     @property
-    def roles(self) -> 'list[RoleType]':
-        """ Get the list of Roles that the Agent is currently playing
-
-            :returns: The list of Roles currently played by the Agent
-            :rtype: list[RoleType]
-        """
-        return list(self._roles.keys())
+    def roles(self):
+        return self._roles
 
     @property
-    def state(self) -> dict:
-        """ Get the current state view of the Agent
-
-            :returns: The current state view of the Agent
-            :rtype: dict
-        """
+    def state(self):
         return self._state
 
     def has_role(self, role: 'RoleType') -> bool:
@@ -83,13 +50,6 @@ class Agent():
         return role in self._roles
 
     def has_behavior(self, behavior: str) -> bool:
-        """ Check whether the agent has a specific behavior
-
-        :param behavior: the behavior to check for
-        :type behavior: str
-        :returns: wether the agent has the behavior or not
-        :rtype: bool
-        """
         return hasattr(self, behavior)
 
     def add_role(self, role: 'Role') -> bool:
@@ -132,7 +92,7 @@ class Agent():
 
         return True
 
-    def get_role(self, role_type: 'RoleType') -> 'Role':
+    def get_role(self, roleType: 'RoleType') -> 'Role':
         """ Get a specific Role instance from the Agent
 
             :param roleType: the role type to get
@@ -140,7 +100,7 @@ class Agent():
             :returns: the role instance or None
             :rtype: Role
         """
-        if not self.has_role(role_type):
+        if not self.has_role(roleType):
             return None
 
-        return self._roles[role_type]
+        return self._roles[roleType]

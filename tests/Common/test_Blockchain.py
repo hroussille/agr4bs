@@ -1,14 +1,7 @@
-"""
-    Test suite for the Blockchain class
-"""
-
-from agr4bs import Block, Blockchain
+from agr4bs.Common import Transaction, Block, Blockchain
 
 
-def test_blockchain_properties():
-    """
-        Test that Blockchain class expose the right properties
-    """
+def test_Blockchain_properties():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -16,18 +9,7 @@ def test_blockchain_properties():
     assert blockchain.head == genesis
 
 
-def test_blockchain_add_block_strict():
-    """
-        Test that Blockchain.add_block_strict() behaves correctly
-
-        add_block_strict() should add a block and return true if its
-        parent block is known, and included in the blockchain.
-
-        add_block_struct() should not add a block and return false if
-        its parent block is uknown or not included in the blockchain.
-
-        Out of order blocks / Uknown parents MUST fail
-    """
+def test_Blockchain_add_block_strict():
 
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
@@ -56,11 +38,7 @@ def test_blockchain_add_block_strict():
     assert blockchain.genesis == genesis
 
 
-def test_blockchain_add_block_in_strict_scenario():
-    """
-        Test that Blockchain.add_block() behaves as add_block_strict()
-        in the same scenario as test_add_block_strict()
-    """
+def test_Blockchain_add_block_strict_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -88,11 +66,7 @@ def test_blockchain_add_block_in_strict_scenario():
     assert blockchain.get_block(block4.hash) is None
 
 
-def test_blockchain_add_block_wrong_order_scenario():
-    """
-        Test that Blockchain.add_block() behaves correctly
-        even if blocks are fed out of order.
-    """
+def test_Blockchain_add_block_wrong_order_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -119,16 +93,11 @@ def test_blockchain_add_block_wrong_order_scenario():
 
     assert blockchain.genesis == genesis
 
-    # pylint: disable=protected-access
     for key in blockchain._staging_blocks:
         assert key == "uknown hash"
 
 
-def test_blockchain_add_block_fork_scenario():
-    """
-        Test that Blockchain.add_block() behaves correctly
-        even in the case of a fork.
-    """
+def test_Blockchain_add_block_fork_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
@@ -149,26 +118,21 @@ def test_blockchain_add_block_fork_scenario():
     assert blockchain.head == block3
 
     assert blockchain.add_block(block4) is True
-    assert blockchain.head in [block3, block4]
+    assert blockchain.head == block3 or blockchain.head == block4
 
     assert blockchain.genesis == genesis
     assert block3.height == block4.height == 3
 
-    # pylint: disable=protected-access
     assert len(blockchain._staging_blocks.keys()) == 0
 
 
-def test_blockchain_add_block_fork_wrong_order_scenario():
-    """
-        Test that Blockchain.add_block() behaves correctly
-        even in the case of a fork when blocks are fed out
-        of order.
-    """
+def test_Blockchain_add_block_fork_wrong_order_scenario():
     genesis = Block(None, None, [])
     blockchain = Blockchain(genesis)
 
     block1 = Block(genesis.hash, "agent0", [])
     block2 = Block(block1.hash, "agent0", [])
+
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block(block2.hash, "agent1", [])
 
@@ -182,10 +146,9 @@ def test_blockchain_add_block_fork_wrong_order_scenario():
     assert blockchain.head == block1
 
     assert blockchain.add_block(block2) is True
-    assert blockchain.head in [block3, block4]
+    assert blockchain.head == block3 or blockchain.head == block4
 
     assert blockchain.genesis == genesis
     assert block3.height == block4.height == 3
 
-    # pylint: disable=protected-access
     assert len(blockchain._staging_blocks.keys()) == 0
