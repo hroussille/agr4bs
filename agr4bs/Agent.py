@@ -79,7 +79,7 @@ class Agent(object):
             :returns: wether the role was removed or not
             :rtype: bool
         """
-        if not(self.has_role(role.type)):
+        if not self.has_role(role.type):
             return False
 
         for behavior in role.behaviors:
@@ -100,7 +100,7 @@ class Agent(object):
             :returns: the role instance or None
             :rtype: Role
         """
-        if not(self.has_role(roleType)):
+        if not self.has_role(roleType):
             return None
 
         return self._roles[roleType]
