@@ -112,11 +112,11 @@ class Agent():
         return True
 
     def remove_role(self, role: 'Role') -> bool:
-        """ Remove a specific role from the agent
+        """ Remove a specific Role from the Agent
 
-            :param role: the role to remove
+            :param role: the Role to remove
             :type role: Role
-            :returns: wether the role was removed or not
+            :returns: wether the Role was removed or not
             :rtype: bool
         """
         if not self.has_role(role.type):
