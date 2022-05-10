@@ -6,7 +6,6 @@ from . import groups
 from . import roles
 from . import common
 
-
 from .agent import Agent
 from .group import Group, GroupType
 from .role import Role, RoleType
