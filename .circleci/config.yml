@@ -10,7 +10,6 @@ orbs:
   # so you dont have to copy and paste it everywhere.
   # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
   python: circleci/python@1.5.0
-  github-super-linter: circleci/github-super-linter@1.0.1
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
@@ -42,13 +41,6 @@ jobs:
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  lint-code-with-options:
-    jobs:
-      - github-super-linter/lint:
-          context: Super-Linter-Options
-          scan-dir: agr4bs
-          version: v4
-
   test:
     jobs:
       - build-and-test
