@@ -1,15 +1,47 @@
-from ..Role import Role, RoleType
-from ..Agent import Agent, StateChange
-from ..Common import Transaction, Payload
+"""
+Abstract implementation of the TransactionProposer role as per AGR4BS
+
+TransactionProposerStateChange:
+
+The TransactionProposerStateChange exposes changes that need to be made to the
+Agent state when the Role is mounted and unmounted.
+
+TransactionProposer:
+
+The TransactionProposer implementation which MUST contain the following :
+- create_transaction
+- propose_transaction
+
+"""
+
+from ..role import Role, RoleType
+from ..agent import Agent, StateChange
+from ..common import Payload, Transaction
 
 
 class TransactionProposerStateChange(StateChange):
 
+    """
+        State changes that need to be made to the Agent when
+        the associated Role (TransactionProposer) is either
+        mounted or unmounted.
+    """
+
     def __init__(self) -> None:
-        super().__init__()
+        pass
 
 
 class TransactionProposer(Role):
+
+    """
+        Implementation of the TransactionProposer Role which must
+        expose the following behaviors :
+        - create_transaction
+        - propose_transaction
+
+        This class MUST be inherited from and expanded to implement
+        the actual logic of it's behaviors.
+    """
 
     def __init__(self) -> None:
         super().__init__(RoleType.TRANSACTION_PROPOSER)

@@ -1,23 +1,54 @@
-from ..Role import Role, RoleType
-from ..Common import Investment
-from ..Agent import Agent, StateChange
+"""
+Abstract implementation of the Investee role as per AGR4BS
+
+InvesteeStateChange:
+
+The InvesteeStateChange exposes changes that need to be made to the
+Agent state when the Role is mounted and unmounted.
+
+Investee:
+
+The Investee implementation which MUST contain the following behaviors :
+- receive_investment
+- redistribute
+- redistribute_full
+"""
+
+from ..role import Role, RoleType
+from ..common import Investment
+from ..agent import Agent, StateChange
 
 
 class InvesteeStateChange(StateChange):
+    """
+        State changes that need to be made to the Agent when
+        the associated Role (Investee) is either
+        mounted or unmounted.
+    """
 
     def __init__(self) -> None:
-        super().__init__()
 
         self.investors = {}
 
 
 class Investee(Role):
 
+    """
+        Implementation of the Investee Role which must
+        expose the following behaviors :
+        - receive_investment
+        - redistribute
+        - redistribute_full
+
+        This class MUST be inherited from and expanded to implement
+        the actual logic of it's behaviors.
+    """
+
     def __init__(self) -> None:
         super().__init__(RoleType.INVESTEE)
 
     @staticmethod
-    def stateChange() -> StateChange:
+    def state_change() -> StateChange:
         return InvesteeStateChange()
 
     @staticmethod

@@ -1,8 +1,16 @@
+
+"""
+    Test suite for the Block class
+"""
+
 import pytest
-from agr4bs.Common import Transaction, Block
+from agr4bs import Block, Transaction
 
 
-def test_Block_properties():
+def test_block_properties():
+    """
+        Test that Block class exposes the right properties
+    """
     tx = Transaction("agent0", "agent1", amount=1000, fee=1)
     block = Block("genesis", "agent0", [tx])
 
@@ -18,7 +26,10 @@ def test_Block_properties():
         excinfo.value)
 
 
-def test_Block_total_fees():
+def test_block_total_fees():
+    """
+        Test that a Block total fee is computed correctly
+    """
     tx1 = Transaction("agent0", "agent1", amount=1000, fee=1)
     tx2 = Transaction("agent0", "agent1", amount=1000, fee=1)
     block = Block("genesis", "agent0", [tx1, tx2])
@@ -26,13 +37,19 @@ def test_Block_total_fees():
     assert block.total_fees == 2
 
 
-def test_Block_hash():
+def test_block_hash():
+    """
+        Test that a Block hash is computed correctly (SHA256)
+    """
     tx = Transaction("agent0", "agent1", amount=1000, fee=1)
     block = Block("genesis", "agent0", [tx])
     assert block.hash == "d9025bdb8668fcb32950d37fcf68e11858407adffe1b182b67d1126c8adc2b02"
 
 
-def test_Block_serialization():
+def test_block_serialization():
+    """
+        Test that a Block serialization matches its content
+    """
     tx = Transaction("agent0", "agent1", amount=1000, fee=1)
     block = Block("genesis", "agent0", [tx])
     assert block.serialize(

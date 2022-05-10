@@ -1,17 +1,52 @@
-from ..Agent import Agent, StateChange
-from ..Role import Role, RoleType
-from ..Common import Transaction, Block
+"""
+Abstract implementation of the BlockchainMaintainer role as per AGR4BS
+
+BlockchainMaintainerStateChange:
+
+The BlockchainMaintainerStateChange exposes changes that need to be made to the
+Agent state when the Role is mounted and unmounted.
+
+BlockchainMaintainer:
+
+The BlockchainMaintainer implementation which MUST contain the following behaviors :
+- validate_transaction
+- validate_block
+- store_transaction
+- execute_transaction
+- append_block
+"""
+
+from ..agent import Agent, StateChange
+from ..role import Role, RoleType
+from ..common import Block, Transaction
 
 
 class BlockchainMaintainerStateChange(StateChange):
+    """
+        State changes that need to be made to the Agent when
+        the associated Role (BlockchainMaintainer) is either
+        mounted or unmounted.
+    """
 
     def __init__(self) -> None:
-        super().__init__()
 
         self.txpool = {}
 
 
 class BlockchainMaintainer(Role):
+
+    """
+        Implementation of the BlockchainMaintainer Role which must
+        expose the following behaviors :
+        - validate_transaction
+        - validate_block
+        - store_transaction
+        - execute_transaction
+        - append_block
+
+        This class MUST be inherited from and expanded to implement
+        the actual logic of it's behaviors.
+    """
 
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCKCHAIN_MAINTAINER)

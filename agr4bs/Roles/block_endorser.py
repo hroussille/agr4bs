@@ -1,9 +1,29 @@
-from ..Agent import Agent, StateChange
-from ..Role import Role, RoleType
-from ..Common import Block
+"""
+Abstract implementation of the BlockEndorser role as per AGR4BS
+
+BlockEndorserStateChange:
+
+The BlockEndorserStateChange exposes changes that need to be made to the
+Agent state when the Role is mounted and unmounted.
+
+BlockEndorser:
+
+The BlockEndorser implementation which MUST contain the following behaviors :
+- endorse_block
+"""
+
+from ..agent import Agent, StateChange
+from ..role import Role, RoleType
+from ..common import Block
 
 
 class BlockEndorserStateChange(StateChange):
+
+    """
+        State changes that need to be made to the Agent when
+        the associated Role (BlockEndorser) is either
+        mounted or unmounted.
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -15,6 +35,14 @@ class BlockEndorserStateChange(StateChange):
 
 
 class BlockEndorser(Role):
+    """
+        Implementation of the BlockEndorser Role which must
+        expose the following behaviors :
+        - endorse_block
+
+        This class MUST be inherited from and expanded to implement
+        the actual logic of it's behaviors.
+    """
 
     def __init__(self) -> None:
         super().__init__(RoleType.BLOCK_ENDORSER)

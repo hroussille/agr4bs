@@ -1,14 +1,29 @@
+"""
+    Test suite for the Investor Role
+"""
+
 import agr4bs
-from agr4bs.Role import RoleType
 
 
-def test_Investor_type():
-    role = agr4bs.Roles.Investor()
+def test_investor_type():
+    """
+    Ensures that an Investor has the appropriate RoleType
+    """
+    role = agr4bs.roles.Investor()
     assert role.type == agr4bs.RoleType.INVESTOR
 
 
-def test_Investor_behaviors():
-    role = agr4bs.Roles.Investor()
+def test_investor_behaviors():
+    """
+    Ensures that an Investor has the appropriate behaviors :
+
+    - specify_investment
+    - invest
+    - withdraw
+
+    Also ensures that the `state_change` static method is NOT exported.
+    """
+    role = agr4bs.roles.Investor()
 
     assert 'specify_investment' in role.behaviors
     assert 'invest' in role.behaviors
@@ -16,12 +31,20 @@ def test_Investor_behaviors():
     assert 'state_change' not in role.behaviors
 
 
-def test_Investor_addition():
+def test_investor_addition():
+    """
+    Ensures that adding an Investor Role to an Agent leads
+    to the appropriate behavior :
+
+    - Agent has the Investor Role
+    - Agent has all the Investor behaviors
+    - Agent has all the Investor state changes
+    """
     agent = agr4bs.Agent("agent_0")
-    role = agr4bs.Roles.Investor()
+    role = agr4bs.roles.Investor()
     agent.add_role(role)
 
-    assert agent.has_role(RoleType.INVESTOR)
+    assert agent.has_role(agr4bs.RoleType.INVESTOR)
 
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
@@ -29,17 +52,25 @@ def test_Investor_addition():
     for state_change in role.state_change().mount():
         assert state_change in agent.state
 
-    assert agent.get_role(RoleType.INVESTOR) == role
+    assert agent.get_role(agr4bs.RoleType.INVESTOR) == role
 
 
-def test_Investor_removal():
+def test_investor_removal():
+    """
+    Ensures that removing a Investor Role to an Agent leads
+    to the appropriate behavior :
+
+    - Agent doesn't have the INVESTOR Role
+    - Agent has none of the Investor behaviors
+    - Agent has none of the Investor state changes
+    """
     agent = agr4bs.Agent("agent_0")
-    role = agr4bs.Roles.Investor()
+    role = agr4bs.roles.Investor()
 
     agent.add_role(role)
     agent.remove_role(role)
 
-    assert agent.has_role(RoleType.INVESTOR) is False
+    assert agent.has_role(agr4bs.RoleType.INVESTOR) is False
 
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
