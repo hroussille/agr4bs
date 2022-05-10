@@ -42,14 +42,14 @@ jobs:
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  lint: # This is the name of the workflow, feel free to change it to better match your workflow.
+  lint-code-with-options: # This is the name of the workflow, feel free to change it to better match your workflow.
     # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - lint-code-with-options
-        context: Super-Linter-Options
-        scan-dir: agr4bs
-        version: v4
-  
+      - github-super-linter/lint:
+          context: Super-Linter-Options
+          scan-dir: agr4bs
+          version: v4
+
   test:
     jobs:
       - build-and-test
