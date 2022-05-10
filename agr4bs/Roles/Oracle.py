@@ -12,7 +12,7 @@ The Oracle implementation has no mandatory exports
 
 """
 
-from agr4bs.agent import StateChange
+from ..agent import StateChange
 from ..role import Role, RoleType
 
 
