@@ -52,4 +52,4 @@ workflows:
   
   test:
     jobs:
-      -build-and-test
+      - build-and-test
