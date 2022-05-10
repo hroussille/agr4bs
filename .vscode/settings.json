@@ -1,7 +1,8 @@
 {
   "python.linting.enabled": true,
-  "python.linting.pycodestyleEnabled": true,
+  "python.linting.pycodestyleEnabled": false,
   "python.linting.pycodestyleArgs": [
     "--ignore=E501"
-  ]
+  ],
+  "python.linting.pylintEnabled": true
 }
