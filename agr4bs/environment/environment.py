@@ -23,8 +23,8 @@ class Environment():
         if network is None:
             network = Network()
 
-        self.network = network
-        self.agents = {}
+        self._network = network
+        self._agents = {}
         self.set_initial_state(initial_state)
 
     def set_initial_state(self, initial_state: dict):
@@ -42,11 +42,11 @@ class Environment():
             :type agent: Agent
             :raises ValueError: If an agent is added twice to the Environment
         """
-        if self.agents[agent.name] is not None:
+        if self.has_agent_by_name(agent.name):
             raise ValueError(
                 "Attempting to add an already existing agent from the environment")
 
-        self.agents[agent.name] = agent
+        self._agents[agent.name] = agent
 
     def remove_agent(self, agent: Agent):
         """ Remove an Agent from the Environment
@@ -55,9 +55,44 @@ class Environment():
             :type agent: Agent
             :raises ValueError: If the agent is not present in the Environment.
         """
-        if self.agents[agent.name] is None:
+        if self.has_agent_by_name(agent.name) is False:
             raise ValueError(
                 "Attempting to remove a non existing agent from the environment")
 
-        self.network.flush_agent(agent)
-        del self.agents[agent.name]
+        self._network.flush_agent(agent)
+        del self._agents[agent.name]
+
+    def has_agent(self, agent: Agent) -> bool:
+        """ Check if an agent is part of the Environment
+
+            :param agent: the Agent to check for
+            :type agent: Agent
+        """
+        return self.has_agent_by_name(agent.name)
+
+    def has_agent_by_name(self, agent_name: str) -> bool:
+        """ Check if an agent is part of the Environment
+
+            :param agent_name: the name of the Agent to check for
+            :type agent_name: str
+        """
+        return agent_name in self._agents
+
+    def get_agent(self, agent: Agent) -> Agent:
+        """ Get a specific agent from the Environment
+
+            :param agent: the Agent to retrieve
+            :type agent: Agent
+        """
+        return self.get_agent_by_name(agent.name)
+
+    def get_agent_by_name(self, agent_name: str) -> Agent:
+        """ Get a specific agent from the Environment
+
+            :param agent_name: the Agent to retrieve
+            :type agent_name: str
+        """
+        if self.has_agent_by_name(agent_name) is False:
+            return None
+
+        return self._agents[agent_name]
