@@ -1,10 +1,10 @@
 """
 Abstract implementation of the TransactionProposer role as per AGR4BS
 
-TransactionProposerStateChange:
+TransactionProposerContextChange:
 
-The TransactionProposerStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The TransactionProposerContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 TransactionProposer:
 
@@ -14,15 +14,15 @@ The TransactionProposer implementation which MUST contain the following :
 
 """
 
-from ..role import Role, RoleType
-from ..agent import Agent, StateChange
+from .role import Role, RoleType
+from ..agents import Agent, ContextChange, AgentType
 from ..common import Payload, Transaction
 
 
-class TransactionProposerStateChange(StateChange):
+class TransactionProposerContextChange(ContextChange):
 
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (TransactionProposer) is either
         mounted or unmounted.
     """
@@ -44,11 +44,14 @@ class TransactionProposer(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.TRANSACTION_PROPOSER)
+        super().__init__(RoleType.TRANSACTION_PROPOSER, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return TransactionProposerStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required whent mounting / unmounting the Role
+        """
+        return TransactionProposerContextChange()
 
     @staticmethod
     def create_transaction(agent: Agent, paylaod: Payload, receiver: Agent) -> Transaction:

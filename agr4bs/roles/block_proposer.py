@@ -2,10 +2,10 @@
 """
 Abstract implementation of the BlockProposer role as per AGR4BS
 
-BlockProposerStateChange:
+BlockProposerContextChange:
 
-The BlockProposerStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The BlockProposerContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 BlockProposer:
 
@@ -15,15 +15,15 @@ The BlockProposer implementation which MUST contain the following behaviors :
 - propose_block
 """
 
-from ..agent import Agent, StateChange
-from ..role import Role, RoleType
+from ..agents import Agent, ContextChange, AgentType
+from .role import Role, RoleType
 from ..common import Transaction
 from ..common import Block
 
 
-class BlockProposerStateChange(StateChange):
+class BlockProposerContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (BlockProposer) is either
         mounted or unmounted.
     """
@@ -47,11 +47,15 @@ class BlockProposer(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.BLOCK_PROPOSER)
+        role_dependencies = [RoleType.BLOCKCHAIN_MAINTAINER]
+        super().__init__(RoleType.BLOCK_PROPOSER, AgentType.EXTERNAL_AGENT, role_dependencies)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return BlockProposerStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required whent mounting / unmounting the Role
+        """
+        return BlockProposerContextChange()
 
     @staticmethod
     def select_transaction(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> list[Transaction]:

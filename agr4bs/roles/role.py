@@ -4,7 +4,7 @@
 """
 
 from enum import Enum, EnumMeta
-from .agent import StateChange
+from ..agents import ContextChange, AgentType
 
 
 class BindBlackListMeta(EnumMeta):
@@ -23,7 +23,7 @@ class BindBlackList(Enum, metaclass=BindBlackListMeta):
         All names present in this enum should not be exported by
         any Role nor they should be imported by any Agent.
     """
-    STATE_CHANGE = "state_change"
+    CONTEXT_CHANGE = "context_change"
 
 
 class RoleType(Enum):
@@ -56,21 +56,34 @@ class Role:
         set of functionalities on the Blockchain.
     """
 
-    def __init__(self, _type: RoleType) -> None:
+    def __init__(self, _type: RoleType, agent_type: AgentType, dependencies: list[RoleType] = None) -> None:
         self._type = _type
+        self._agent_type = agent_type
+
+        if dependencies is None:
+            dependencies = []
+
+        self._dependencies = dependencies
 
     @staticmethod
-    def state_change() -> StateChange:
+    def context_change() -> ContextChange:
         """
-            The state_change static method should return a StateChange object
-            describing the changes needed to the state whenever the Role is
+            The context_change static method should return a ContextChange object
+            describing the changes needed to the context whenever the Role is
             mounted or unmounted from an Agent.
 
             Each concrete Role implementation MUST redefine this method as well
-            as define its own RoleNameStateChange class to be independant of every
+            as define its own RoleNameContextChange class to be independant of every
             other Roles.
         """
-        return StateChange()
+        return ContextChange()
+
+    @staticmethod
+    def dependencies() -> list[RoleType]:
+        """
+            The dependencies function should return the list of RoleTypes that this Role relies on.
+        """
+        return []
 
     @property
     def behaviors(self) -> dict:
@@ -89,3 +102,12 @@ class Role:
             :rtype: RoleType
         """
         return self._type
+
+    @property
+    def agent_type(self) -> AgentType:
+        """ Get the AgentType the Role is able to be mounted to
+
+            :returns: the AgentType the Role can be mounted to
+            :rtype: AgentType
+        """
+        return self._agent_type

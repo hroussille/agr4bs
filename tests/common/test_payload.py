@@ -10,8 +10,8 @@ def test_payload_data():
     """
         Test Payload data integrity
     """
-    payload = Payload("deadbeef")
-    assert payload.data == "deadbeef"
+    payload = Payload(b"deadbeef")
+    assert payload.data == b"deadbeef"
 
 
 def test_payload_data_type():
@@ -21,7 +21,7 @@ def test_payload_data_type():
     with pytest.raises(TypeError) as excinfo:
         Payload(1)
 
-    assert "Invalid Payload data type. Got <class 'int'> expected str" in str(
+    assert "Invalid Payload data type. Got <class 'int'> expected <class 'bytes'>" in str(
         excinfo.value)
 
 
@@ -29,8 +29,8 @@ def test_payload_serialization():
     """
         Test Payload serialization
     """
-    payload1 = Payload("deadbeef")
-    payload2 = Payload("")
+    payload1 = Payload(b"deadbeef")
+    payload2 = Payload()
 
-    assert payload1.serialize() == "deadbeef"
-    assert payload2.serialize() == ""
+    assert payload1.serialize() == b"deadbeef"
+    assert payload2.serialize() == b""

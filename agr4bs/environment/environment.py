@@ -2,7 +2,7 @@
     Environment file class implementation
 """
 
-from ..agent import Agent
+from ..agents.agent import Agent
 from ..network import Network
 
 

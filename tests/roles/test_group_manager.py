@@ -19,12 +19,12 @@ def test_group_manager_behaviors():
 
     - authorize
 
-    Also ensures that the `state_change` static method is NOT exported.
+    Also ensures that the `context_change` static method is NOT exported.
     """
     role = agr4bs.roles.GroupManager()
 
     assert 'authorize' in role.behaviors
-    assert 'state_change' not in role.behaviors
+    assert 'context_change' not in role.behaviors
 
 
 def test_group_manager_addition():
@@ -34,9 +34,9 @@ def test_group_manager_addition():
 
     - Agent has the GROUP_MANAGER Role
     - Agent has all the GroupManager behaviors
-    - Agent has all the GroupManager state changes
+    - Agent has all the GroupManager context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.GroupManager()
     agent.add_role(role)
 
@@ -45,8 +45,8 @@ def test_group_manager_addition():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
 
-    for state_change in role.state_change().mount():
-        assert state_change in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change in agent.context
 
     assert agent.get_role(agr4bs.RoleType.GROUP_MANAGER) == role
 
@@ -58,9 +58,9 @@ def test_group_manager_removal():
 
     - Agent doesn't have the GROUP_MANAGER Role
     - Agent has none of the GroupManager behaviors
-    - Agent has none of the GroupManager state changes
+    - Agent has none of the GroupManager context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.GroupManager()
 
     agent.add_role(role)
@@ -71,5 +71,5 @@ def test_group_manager_removal():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
 
-    for state_change in role.state_change().mount():
-        assert state_change not in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change not in agent.context

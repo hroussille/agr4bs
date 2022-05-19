@@ -69,19 +69,19 @@ def test_blockchain_add_block_in_strict_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block("uknown hash", "agent0", [])
 
-    assert blockchain.add_block(block1) is True
+    assert blockchain.add_block(block1) == tuple([True, [], [block1]])
     assert blockchain.head == block1
     assert blockchain.get_block(block1.hash).height == 1
 
-    assert blockchain.add_block(block2) is True
+    assert blockchain.add_block(block2) == tuple([True, [], [block2]])
     assert blockchain.head == block2
     assert blockchain.get_block(block2.hash).height == 2
 
-    assert blockchain.add_block(block3) is True
+    assert blockchain.add_block(block3) == tuple([True, [], [block3]])
     assert blockchain.head == block3
     assert blockchain.get_block(block3.hash).height == 3
 
-    assert blockchain.add_block(block4) is False
+    assert blockchain.add_block(block4) == tuple([False, [], []])
     assert blockchain.head == block3
 
     assert blockchain.genesis == genesis
@@ -101,20 +101,21 @@ def test_blockchain_add_block_wrong_order_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block("uknown hash", "agent0", [])
 
-    assert blockchain.add_block(block3) is False
+    assert blockchain.add_block(block3) == tuple([False, [], []])
     assert blockchain.head == genesis
 
-    assert blockchain.add_block(block2) is False
+    assert blockchain.add_block(block2) == tuple([False, [], []])
     assert blockchain.head == genesis
 
-    assert blockchain.add_block(block1) is True
+    assert blockchain.add_block(block1) == tuple(
+        [True, [], [block1, block2, block3]])
     assert blockchain.head == block3
 
     assert blockchain.get_block(block1.hash).height == 1
     assert blockchain.get_block(block2.hash).height == 2
     assert blockchain.get_block(block3.hash).height == 3
 
-    assert blockchain.add_block(block4) is False
+    assert blockchain.add_block(block4) == tuple([False, [], []])
     assert blockchain.get_block(block4.hash) is None
 
     assert blockchain.genesis == genesis
@@ -139,16 +140,19 @@ def test_blockchain_add_block_fork_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block(block2.hash, "agent1", [])
 
-    assert blockchain.add_block(block1) is True
+    assert blockchain.add_block(block1) == tuple([True, [], [block1]])
     assert blockchain.head == block1
 
-    assert blockchain.add_block(block2) is True
+    assert blockchain.add_block(block2) == tuple([True, [], [block2]])
     assert blockchain.head == block2
 
-    assert blockchain.add_block(block3) is True
+    assert blockchain.add_block(block3) == tuple([True, [], [block3]])
     assert blockchain.head == block3
 
-    assert blockchain.add_block(block4) is True
+    result = blockchain.add_block(block4)
+
+    assert result == tuple([True, [], []]) or result == tuple(
+        [True, [block3], [block4]])
     assert blockchain.head in [block3, block4]
 
     assert blockchain.genesis == genesis
@@ -172,16 +176,19 @@ def test_blockchain_add_block_fork_wrong_order_scenario():
     block3 = Block(block2.hash, "agent0", [])
     block4 = Block(block2.hash, "agent1", [])
 
-    assert blockchain.add_block(block4) is False
+    assert blockchain.add_block(block4) == tuple([False, [], []])
     assert blockchain.head == genesis
 
-    assert blockchain.add_block(block3) is False
+    assert blockchain.add_block(block3) == tuple([False, [], []])
     assert blockchain.head == genesis
 
-    assert blockchain.add_block(block1) is True
+    assert blockchain.add_block(block1) == tuple([True, [], [block1]])
     assert blockchain.head == block1
 
-    assert blockchain.add_block(block2) is True
+    result = blockchain.add_block(block2)
+
+    assert result == tuple([True, [], [block2, block3]]) or result == tuple(
+        [True, [], [block2, block4]])
     assert blockchain.head in [block3, block4]
 
     assert blockchain.genesis == genesis

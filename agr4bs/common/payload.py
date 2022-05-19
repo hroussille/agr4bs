@@ -3,7 +3,10 @@
 """
 
 
-class Payload():
+from .serializable import Serializable
+
+
+class Payload(Serializable):
 
     """
         Payload class implementation :
@@ -11,14 +14,14 @@ class Payload():
         A Payload is essentially some data that is included into a Transaction.
     """
 
-    def __init__(self, data: str = None):
+    def __init__(self, data: bytes = None):
 
         if data is None:
-            data = ""
+            data = bytes()
 
-        if not isinstance(data, str):
+        if not isinstance(data, bytes):
             raise TypeError(
-                f'Invalid Payload data type. Got {type(data)} expected str')
+                f'Invalid Payload data type. Got {type(data)} expected <class \'bytes\'>')
 
         self._data = data
 
@@ -31,7 +34,7 @@ class Payload():
         """
         return self._data
 
-    def serialize(self) -> str:
+    def serialize(self) -> bytes:
         """ Serialize the Payload
 
             :returns: the serialized Payload

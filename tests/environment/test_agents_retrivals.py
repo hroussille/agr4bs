@@ -9,10 +9,10 @@ def test_agent_retrieval():
     """
         Test that an agent can be retrived by its object reference
     """
-    agent0 = agr4bs.Agent("agent0")
-    agent1 = agr4bs.Agent("agent1")
-    agent2 = agr4bs.Agent("agent2")
-    agent3 = agr4bs.Agent("agent3")
+    agent0 = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
+    agent1 = agr4bs.Agent("agent1", agr4bs.AgentType.EXTERNAL_AGENT)
+    agent2 = agr4bs.Agent("agent2", agr4bs.AgentType.EXTERNAL_AGENT)
+    agent3 = agr4bs.Agent("agent3", agr4bs.AgentType.EXTERNAL_AGENT)
 
     env = agr4bs.Environment()
     env.add_agent(agent0)
@@ -34,10 +34,10 @@ def test_agent_retrieval_by_name():
     """
         Test that an agent can be retrived by its name
     """
-    agent0 = agr4bs.Agent("agent0")
-    agent1 = agr4bs.Agent("agent1")
-    agent2 = agr4bs.Agent("agent2")
-    agent3 = agr4bs.Agent("agent3")
+    agent0 = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
+    agent1 = agr4bs.Agent("agent1", agr4bs.AgentType.EXTERNAL_AGENT)
+    agent2 = agr4bs.Agent("agent2", agr4bs.AgentType.EXTERNAL_AGENT)
+    agent3 = agr4bs.Agent("agent3", agr4bs.AgentType.EXTERNAL_AGENT)
 
     env = agr4bs.Environment()
     env.add_agent(agent0)

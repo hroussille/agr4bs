@@ -21,14 +21,14 @@ def test_block_proposer_behaviors():
     - create_block
     - propose_block
 
-    Also ensures that the `state_change` static method is NOT exported.
+    Also ensures that the `context_change` static method is NOT exported.
     """
     role = agr4bs.roles.BlockProposer()
 
     assert 'select_transaction' in role.behaviors
     assert 'create_block' in role.behaviors
     assert 'propose_block' in role.behaviors
-    assert 'state_change' not in role.behaviors
+    assert 'context_change' not in role.behaviors
 
 
 def test_block_proposer_addition():
@@ -38,9 +38,9 @@ def test_block_proposer_addition():
 
     - Agent has the BLOCK_PROPOSER Role
     - Agent has all the BlockProposer behaviors
-    - Agent has all the BlockProposer state changes
+    - Agent has all the BlockProposer context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.BlockProposer()
     agent.add_role(role)
 
@@ -49,8 +49,8 @@ def test_block_proposer_addition():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
 
-    for state_change in role.state_change().mount():
-        assert state_change in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change in agent.context
 
     assert agent.get_role(agr4bs.RoleType.BLOCK_PROPOSER) == role
 
@@ -62,9 +62,9 @@ def test_block_proposer_removal():
 
     - Agent doesn't have the BLOCK_PROPOSER Role
     - Agent has none of the BlockProposer behaviors
-    - Agent has none of the BlockProposer state changes
+    - Agent has none of the BlockProposer context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.BlockProposer()
 
     agent.add_role(role)
@@ -75,5 +75,5 @@ def test_block_proposer_removal():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
 
-    for state_change in role.state_change().mount():
-        assert state_change not in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change not in agent.context

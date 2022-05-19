@@ -2,30 +2,20 @@
     Agent file class implementation
 """
 
-from copy import deepcopy
+from enum import Enum
+from .context import Context
 
 
-class StateChange():
+class AgentType(Enum):
 
     """
-        State changes that need to be made to the Agent when
-        the associated Role is either
-        mounted or unmounted.
+        Enumeration discerning the allowed types of agents
+
+        - EXTERNAL_AGENT : a blockchain participant
+        - INTERNAL_AGENT : a smart contract
     """
-
-    def mount(self) -> dict:
-        """
-            Returns the dictionary describing the keys that should be made available
-            in the agent state as well as their initial values.
-        """
-        return self.__dict__
-
-    def unmount(self) -> list:
-        """
-            Returns the list describing the keys that should be removed from the agent
-            state.
-        """
-        return list(self.__dict__.keys())
+    EXTERNAL_AGENT = "external_agent"
+    INTERNAL_AGENT = "internal_agent"
 
 
 class Agent():
@@ -38,7 +28,7 @@ class Agent():
         the Roles it endorsed.
     """
 
-    def __init__(self, name: str, initial_state: dict = None) -> None:
+    def __init__(self, name: str, _type: AgentType) -> None:
         """ Initializes the Agent interface
 
             :param name: the name of the agent
@@ -48,11 +38,8 @@ class Agent():
         """
         self.name = name
         self._roles = {}
-
-        if initial_state is None:
-            initial_state = {}
-
-        self._state = {} | deepcopy(initial_state)
+        self._context = Context()
+        self._type = _type
 
     @property
     def roles(self) -> 'list[RoleType]':
@@ -64,13 +51,22 @@ class Agent():
         return list(self._roles.keys())
 
     @property
-    def state(self) -> dict:
-        """ Get the current state view of the Agent
+    def context(self) -> Context:
+        """ Get the current Context of the Agent
 
-            :returns: The current state view of the Agent
-            :rtype: dict
+            :returns: The current Context of the Agent
+            :rtype: Context
         """
-        return self._state
+        return self._context
+
+    @property
+    def type(self) -> AgentType:
+        """ Get the type of the Agent
+
+            :returns: The  type of the Agent
+            :rtype: RoleType
+        """
+        return self._type
 
     def has_role(self, role: 'RoleType') -> bool:
         """ Check whether the agent has a specific Role
@@ -85,10 +81,10 @@ class Agent():
     def has_behavior(self, behavior: str) -> bool:
         """ Check whether the agent has a specific behavior
 
-        :param behavior: the behavior to check for
-        :type behavior: str
-        :returns: wether the agent has the behavior or not
-        :rtype: bool
+            :param behavior: the behavior to check for
+            :type behavior: str
+            :returns: wether the agent has the behavior or not
+            :rtype: bool
         """
         return hasattr(self, behavior)
 
@@ -103,8 +99,12 @@ class Agent():
         if self.has_role(role.type):
             return False
 
+        if role.agent_type != self._type:
+            raise ValueError(
+                "Attempting to add an incompatible Role to an Agent")
+
         self._roles[role.type] = role
-        self._state |= role.state_change().mount()
+        self._context.apply_context_change(role.context_change())
 
         for behavior, implementation in role.behaviors.items():
             setattr(self, behavior, implementation)
@@ -125,8 +125,7 @@ class Agent():
         for behavior in role.behaviors:
             delattr(self, behavior)
 
-        for state_property in role.state_change().unmount():
-            del self._state[state_property]
+        self._context.revert_context_change(role.context_change())
 
         del self._roles[role.type]
 
