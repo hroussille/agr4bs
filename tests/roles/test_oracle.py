@@ -15,11 +15,11 @@ def test_oracle_type():
 
 def test_oracle_behaviors():
     """
-    Ensures that the `state_change` static method is NOT exported.
+    Ensures that the `context_change` static method is NOT exported.
     """
     role = agr4bs.roles.Oracle()
 
-    assert 'state_change' not in role.behaviors
+    assert 'context_change' not in role.behaviors
 
 
 def test_oracle_addition():
@@ -29,9 +29,9 @@ def test_oracle_addition():
 
     - Agent has the Oracle Role
     - Agent has all the Oracle behaviors
-    - Agent has all the Oracle state changes
+    - Agent has all the Oracle context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.Oracle()
     agent.add_role(role)
 
@@ -40,8 +40,8 @@ def test_oracle_addition():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
 
-    for state_change in role.state_change().mount():
-        assert state_change in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change in agent.context
 
     assert agent.get_role(agr4bs.RoleType.ORACLE) == role
 
@@ -53,9 +53,9 @@ def test_oracle_removal():
 
     - Agent doesn't have the ORACLE Role
     - Agent has none of the Oracle behaviors
-    - Agent has none of the Oracle state changes
+    - Agent has none of the Oracle context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.Oracle()
 
     agent.add_role(role)
@@ -66,5 +66,5 @@ def test_oracle_removal():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
 
-    for state_change in role.state_change().mount():
-        assert state_change not in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change not in agent.context

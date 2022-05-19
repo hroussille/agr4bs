@@ -1,10 +1,10 @@
 """
 Abstract implementation of the Oracle role as per AGR4BS
 
-OracleStateChange:
+OracleContextChange:
 
-The OracleStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The OracleContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 Oracle:
 
@@ -12,13 +12,13 @@ The Oracle implementation has no mandatory exports
 
 """
 
-from ..agent import StateChange
-from ..role import Role, RoleType
+from ..agents import ContextChange, AgentType
+from .role import Role, RoleType
 
 
-class OracleStateChange(StateChange):
+class OracleContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (Oracle) is either
         mounted or unmounted.
     """
@@ -36,8 +36,11 @@ class Oracle(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.ORACLE)
+        super().__init__(RoleType.ORACLE, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return OracleStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required when mounting / unmounting the Role
+        """
+        return OracleContextChange()

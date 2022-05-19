@@ -21,14 +21,14 @@ def test_investee_behaviors():
     - redistribute
     - redistribute_full
 
-    Also ensures that the `state_change` static method is NOT exported.
+    Also ensures that the `context_change` static method is NOT exported.
     """
     role = agr4bs.roles.Investee()
 
     assert 'receive_investment' in role.behaviors
     assert 'redistribute' in role.behaviors
     assert 'redistribute_full' in role.behaviors
-    assert 'state_change' not in role.behaviors
+    assert 'context_change' not in role.behaviors
 
 
 def test_investee_addition():
@@ -38,9 +38,9 @@ def test_investee_addition():
 
     - Agent has the Investee Role
     - Agent has all the Investee behaviors
-    - Agent has all the Investee state changes
+    - Agent has all the Investee context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.Investee()
     agent.add_role(role)
 
@@ -49,8 +49,8 @@ def test_investee_addition():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
 
-    for state_change in role.state_change().mount():
-        assert state_change in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change in agent.context
 
     assert agent.get_role(agr4bs.RoleType.INVESTEE) == role
 
@@ -62,9 +62,9 @@ def test_investee_removal():
 
     - Agent doesn't have the INVESTEE Role
     - Agent has none of the Investee behaviors
-    - Agent has none of the Investee state changes
+    - Agent has none of the Investee context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.Investee()
 
     agent.add_role(role)
@@ -75,5 +75,5 @@ def test_investee_removal():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
 
-    for state_change in role.state_change().mount():
-        assert state_change not in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change not in agent.context

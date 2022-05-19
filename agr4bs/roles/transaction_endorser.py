@@ -1,10 +1,10 @@
 """
 Abstract implementation of the TransactionEndorser role as per AGR4BS
 
-TransactionEndorserStateChange:
+TransactionEndorserContextChange:
 
-The TransactionEndorserStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The TransactionEndorserContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 TransactionEndorser:
 
@@ -12,14 +12,14 @@ The TransactionProposer implementation which MUST contain the following :
 - endorse_transaction
 """
 
-from ..agent import Agent, StateChange
-from ..role import Role, RoleType
+from ..agents import Agent, ContextChange, AgentType
+from .role import Role, RoleType
 from ..common import Transaction
 
 
-class TransactionEndorserStateChange(StateChange):
+class TransactionEndorserContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (TransactionEndorser) is either
         mounted or unmounted.
     """
@@ -43,11 +43,14 @@ class TransactionEndorser(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.TRANSACTION_ENDORSER)
+        super().__init__(RoleType.TRANSACTION_ENDORSER, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return TransactionEndorserStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required whent mounting / unmounting the Role
+        """
+        return TransactionEndorserContextChange()
 
     @staticmethod
     def endorse_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:

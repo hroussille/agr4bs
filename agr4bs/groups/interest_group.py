@@ -2,7 +2,7 @@
     InterestGroup file class implementation
 """
 
-from ..group import Group, GroupType
+from .group import Group, GroupType
 
 
 class InterestGroup(Group):

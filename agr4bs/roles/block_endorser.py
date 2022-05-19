@@ -1,10 +1,10 @@
 """
 Abstract implementation of the BlockEndorser role as per AGR4BS
 
-BlockEndorserStateChange:
+BlockEndorserContextChange:
 
-The BlockEndorserStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The BlockEndorserContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 BlockEndorser:
 
@@ -12,15 +12,15 @@ The BlockEndorser implementation which MUST contain the following behaviors :
 - endorse_block
 """
 
-from ..agent import Agent, StateChange
-from ..role import Role, RoleType
+from ..agents import Agent, ContextChange, AgentType
+from .role import Role, RoleType
 from ..common import Block
 
 
-class BlockEndorserStateChange(StateChange):
+class BlockEndorserContextChange(ContextChange):
 
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (BlockEndorser) is either
         mounted or unmounted.
     """
@@ -45,11 +45,14 @@ class BlockEndorser(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.BLOCK_ENDORSER)
+        super().__init__(RoleType.BLOCK_ENDORSER, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return BlockEndorserStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required whent mounting / unmounting the Role
+        """
+        return BlockEndorserContextChange()
 
     @staticmethod
     def endorse_block(agent: Agent, block: Block, *args, **kwargs) -> bool:

@@ -1,10 +1,10 @@
 """
 Abstract implementation of the GroupManager role as per AGR4BS
 
-GroupManagerStateChange:
+GroupManagerContextChange:
 
-The GroupManagerStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The GroupManagerContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 GroupManager:
 
@@ -12,13 +12,13 @@ The GroupManager implementation which MUST contain the following behaviors :
 - authorize
 """
 
-from ..role import Role, RoleType
-from ..agent import Agent, StateChange
+from ..agents import Agent, ContextChange, AgentType
+from .role import Role, RoleType
 
 
-class GroupManagerStateChange(StateChange):
+class GroupManagerContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (GroupManager) is either
         mounted or unmounted.
     """
@@ -40,11 +40,14 @@ class GroupManager(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.GROUP_MANAGER)
+        super().__init__(RoleType.GROUP_MANAGER, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return GroupManagerStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required when mounting / unmounting the Role
+        """
+        return GroupManagerContextChange()
 
     @staticmethod
     def authorize(agent: Agent, candidate: Agent, *args, **kwargs) -> bool:

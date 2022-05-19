@@ -23,7 +23,7 @@ def test_blockchain_maintainer_behaviors():
     - validate_transaction
     - store_transaction
 
-    Also ensures that the `state_change` static method is NOT exported.
+    Also ensures that the `context_change` static method is NOT exported.
     """
     role = agr4bs.roles.BlockchainMaintainer()
 
@@ -32,7 +32,7 @@ def test_blockchain_maintainer_behaviors():
     assert 'validate_block' in role.behaviors
     assert 'validate_transaction' in role.behaviors
     assert 'store_transaction' in role.behaviors
-    assert 'state_change' not in role.behaviors
+    assert 'context_change' not in role.behaviors
 
 
 def test_blockchain_maintainer_addition():
@@ -42,17 +42,18 @@ def test_blockchain_maintainer_addition():
 
     - Agent has the BLOCKCHAIN_MAINTAINER Role
     - Agent has all the BlockchainMaintainer behaviors
-    - Agent has all the BlockchainMaintainer state changes
+    - Agent has all the BlockchainMaintainer context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis)
     role = agr4bs.roles.BlockchainMaintainer()
     agent.add_role(role)
 
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
 
-    for state_change in role.state_change().mount():
-        assert state_change in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change in agent.context
 
     assert agent.get_role(agr4bs.RoleType.BLOCKCHAIN_MAINTAINER) == role
 
@@ -64,9 +65,10 @@ def test_blockchain_maintainer_removal():
 
     - Agent doesn't have the BLOCKCHAIN_MAINTAINER Role
     - Agent has none of the BlockchainMaintainer behaviors
-    - Agent has none of the BlockchainMaintainer state changes
+    - Agent has none of the BlockchainMaintainer context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis)
     role = agr4bs.roles.BlockchainMaintainer()
 
     agent.add_role(role)
@@ -77,5 +79,5 @@ def test_blockchain_maintainer_removal():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
 
-    for state_change in role.state_change().mount():
-        assert state_change not in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change not in agent.context

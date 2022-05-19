@@ -1,10 +1,10 @@
 """
 Abstract implementation of the Contractor role as per AGR4BS
 
-OracleStateChange:
+ContractorContextChange:
 
-The OracleStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The ContractorContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 Contractor:
 
@@ -12,13 +12,13 @@ The Contractor implementation has no mandatory exports
 
 """
 
-from ..agent import StateChange
-from ..role import Role, RoleType
+from ..agents import ContextChange, AgentType
+from .role import Role, RoleType
 
 
-class ContractorStateChange(StateChange):
+class ContractorContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (Contractor) is either
         mounted or unmounted.
     """
@@ -36,8 +36,11 @@ class Contractor(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.CONTRACTOR)
+        super().__init__(RoleType.CONTRACTOR, AgentType.INTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return ContractorStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required whent mounting / unmounting the Role
+        """
+        return ContractorContextChange()

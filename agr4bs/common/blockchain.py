@@ -142,6 +142,73 @@ class Blockchain():
             if random.random() > 0.5:
                 self._head = block
 
+    def _get_block_path(self, child: Block, parent: Block, include_child=True, include_parent=False) -> bool:
+        path = deque()
+
+        if include_child is True:
+            path.appendleft(child)
+
+        while child.parent_hash != parent.hash and child.parent_hash is not None:
+            child = self._blocks[child.parent_hash]
+            path.appendleft(self._blocks[child.hash])
+
+        if child.parent_hash != parent.hash:
+            raise ValueError("Not path between blocks")
+
+        if include_parent:
+            path.appendleft(parent)
+
+        return list(path)
+
+    def _is_close_parent(self, child_block: Block, parent_block: Block, limit=10) -> bool:
+        """
+            Find out if a Block is a distant parent of another Block
+        """
+        for _ in range(limit):
+
+            if child_block.parent_hash == parent_block.hash:
+                return True
+
+            if child_block.parent_hash is not None:
+                child_block = self._blocks[child_block.parent_hash]
+            else:
+                return False
+
+        return False
+
+    def _get_nth_parent(self, block: Block, n: int) -> Block:
+        """
+            Get the nth parent of a given Block.
+            Stops at genesis block.
+        """
+
+        for _ in range(n):
+            if block.parent_hash is not None:
+                block = self._blocks[block.parent_hash]
+
+        return block
+
+    def _find_common_ancestor(self, block_a: Block, block_b: Block) -> Block:
+        """
+            Find the first common ancestor of block_a and block_b
+            Worst case is the genesis block
+        """
+
+        if block_a.height > block_b.height:
+            block_a = self._get_nth_parent(
+                block_a, block_a.height - block_b.height)
+        else:
+            block_b = self._get_nth_parent(
+                block_b, block_b.height - block_a.height)
+
+        while block_a.parent_hash is not None and block_b.parent_hash is not None:
+            if block_a == block_b:
+                return block_a
+            block_a = self._blocks[block_a.parent_hash]
+            block_b = self._blocks[block_b.parent_hash]
+
+        raise ValueError("Blocks have no common ancestor")
+
     def add_block_strict(self, block: Block) -> bool:
         """ Add a Block to the Blockchain in Strict Mode
 
@@ -168,7 +235,7 @@ class Blockchain():
 
         return True
 
-    def add_block(self, block: Block) -> bool:
+    def add_block(self, block: Block) -> tuple[bool, list[Block], list[Block]]:
         """ Add a Block to the Blockchain in non Strict mode
 
             Non Strict Mode allows the inclusion of a Block in the Blockchain
@@ -185,21 +252,43 @@ class Blockchain():
         """
 
         if block.hash in self._blocks:
-            return False
+            return False, [], []
 
         if block.parent_hash not in self._blocks:
             if block.parent_hash not in self._staging_blocks:
                 self._staging_blocks[block.parent_hash] = [block]
             else:
                 self._staging_blocks[block.parent_hash].append(block)
-            return False
+            return False, [], []
 
-        block.height = self._blocks[block.parent_hash].height + 1
-        self._blocks[block.hash] = block
-        self._fork_rule(block)
+        previous_head = self._head
+        added_blocks = 1
 
-        for dependent_block in self._unstage_blocks(block):
+        if self.add_block_strict(block) is not True:
+            raise ValueError("Chain is corrupted.")
+
+        dependent_blocks = self._unstage_blocks(block)
+
+        for dependent_block in dependent_blocks:
             if self.add_block_strict(dependent_block) is not True:
                 raise ValueError("Chain is corrupted.")
 
-        return True
+        added_blocks += len(dependent_blocks)
+
+        reverted_blocks = []
+        appended_blocks = []
+
+        if previous_head != self._head:
+            if self._is_close_parent(self._head, previous_head, added_blocks):
+                appended_blocks = self._get_block_path(
+                    self._head, previous_head)
+            else:
+                common_ancestor = self._find_common_ancestor(
+                    self._head, previous_head)
+
+                reverted_blocks = self._get_block_path(
+                    previous_head, common_ancestor)
+                appended_blocks = self._get_block_path(
+                    self._head, common_ancestor)
+
+        return True, reverted_blocks, appended_blocks

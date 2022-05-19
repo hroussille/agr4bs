@@ -4,7 +4,7 @@
 """
 
 from enum import Enum
-from .agent import Agent
+from ..agents import Agent
 
 
 class GroupType(Enum):

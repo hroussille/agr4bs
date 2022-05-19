@@ -19,12 +19,12 @@ def test_transaction_endorser_behaviors():
 
     - endorse_transaction
 
-    Also ensures that the `state_change` static method is NOT exported.
+    Also ensures that the `context_change` static method is NOT exported.
     """
     role = agr4bs.roles.TransactionEndorser()
 
     assert 'endorse_transaction' in role.behaviors
-    assert 'state_change' not in role.behaviors
+    assert 'context_change' not in role.behaviors
 
 
 def test_transaction_endorser_addition():
@@ -34,9 +34,9 @@ def test_transaction_endorser_addition():
 
     - Agent has the TRANSACTION_ENDORSER Role
     - Agent has all the TransactionEndorser behaviors
-    - Agent has all the TransactionEndorser state changes
+    - Agent has all the TransactionEndorser context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.TransactionEndorser()
     agent.add_role(role)
 
@@ -45,8 +45,8 @@ def test_transaction_endorser_addition():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior)
 
-    for state_change in role.state_change().mount():
-        assert state_change in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change in agent.context
 
     assert agent.get_role(agr4bs.RoleType.TRANSACTION_ENDORSER) == role
 
@@ -58,9 +58,9 @@ def test_transaction_endorser_removal():
 
     - Agent doesn't have the TRANSACTION_ENDORSER Role
     - Agent has none of the TransactionEndorser behaviors
-    - Agent has none of the TransactionEndorser state changes
+    - Agent has none of the TransactionEndorser context changes
     """
-    agent = agr4bs.Agent("agent_0")
+    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
     role = agr4bs.roles.TransactionEndorser()
 
     agent.add_role(role)
@@ -71,5 +71,5 @@ def test_transaction_endorser_removal():
     for behavior in role.behaviors:
         assert agent.has_behavior(behavior) is False
 
-    for state_change in role.state_change().mount():
-        assert state_change not in agent.state
+    for context_change in role.context_change().mount():
+        assert context_change not in agent.context

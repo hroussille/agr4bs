@@ -3,7 +3,7 @@
 """
 
 from ..common import Transaction, Block
-from ..agent import Agent
+from ..agents import Agent
 
 
 class Network():

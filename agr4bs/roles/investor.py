@@ -1,10 +1,10 @@
 """
 Abstract implementation of the Investor role as per AGR4BS
 
-InvestorStateChange:
+InvestorContextChange:
 
-The InvestorStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The InvestorContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 Investor:
 
@@ -15,14 +15,14 @@ The Investor implementation which MUST contain the following behaviors :
 
 """
 
-from ..role import Role, RoleType
-from ..agent import Agent, StateChange
+from .role import Role, RoleType
+from ..agents import Agent, ContextChange, AgentType
 from ..common import Investment
 
 
-class InvestorStateChange(StateChange):
+class InvestorContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (Investor) is either
         mounted or unmounted.
     """
@@ -45,11 +45,14 @@ class Investor(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.INVESTOR)
+        super().__init__(RoleType.INVESTOR, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return InvestorStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required when mounting / unmounting the Role
+        """
+        return InvestorContextChange()
 
     @staticmethod
     def specify_investment(agent: Agent, *args, **kwargs) -> Investment:

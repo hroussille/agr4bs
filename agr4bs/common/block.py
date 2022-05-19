@@ -4,11 +4,13 @@
 """
 
 import hashlib
+import pickle
+
+from .serializable import Serializable
 from .transaction import Transaction
-from ..agent import Agent
 
 
-class Block():
+class Block(Serializable):
 
     """
         Block class implementation :
@@ -17,13 +19,17 @@ class Block():
         included in a Blockchain.
     """
 
-    def __init__(self, parent_hash: str, creator: str, transactions: list[Transaction]) -> None:
+    def __init__(self, parent_hash: str, creator: str, transactions: list[Transaction] = None) -> None:
         self._parent_hash = parent_hash
+
+        if transactions is None:
+            transactions = []
+
         self._transactions = transactions
         self._creator = creator
-        self._hash = self.compute_hash()
         self._total_fees = sum(map(lambda tx: tx.fee, self._transactions))
         self._height = 0
+        self._hash = self.compute_hash()
 
     @property
     def parent_hash(self) -> "str":
@@ -44,7 +50,7 @@ class Block():
         return self._transactions
 
     @property
-    def creator(self) -> Agent:
+    def creator(self) -> "Agent":
         """ Get the Agent that created the Block
 
             :returns: the Agent that created the Block
@@ -91,22 +97,26 @@ class Block():
 
         self._height = new_height
 
-    def __str__(self) -> str:
-        return self.serialize()
-
-    def serialize(self) -> str:
-        """ Serialize the Block
-
-            :returns: the serialized Block
-            :rtype: str
-        """
-        serialized_txs = ','.join((map(str, self._transactions)))
-        return f'{{ parentHash: {self._parent_hash} - creator: {self._creator} - transactions: {serialized_txs} }}'
-
     def compute_hash(self) -> str:
         """ Computes the hash of the Block
 
             :returns: The hash of the Block
             :rtype: str
         """
-        return hashlib.sha256(self.serialize().encode()).hexdigest()
+
+        hash_dict = {'parent_hash': self._parent_hash, 'creator': self._creator,
+                     'total_fees': self._total_fees, 'transactions': list(map(lambda tx: tx.compute_hash(), self._transactions))}
+
+        return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()
+
+    @ staticmethod
+    def from_serialized(serialized: str) -> 'Block':
+        """
+            Rebuilds a Block from a serialized Block
+        """
+        block = pickle.loads(serialized)
+
+        if not isinstance(block, Block):
+            return None
+
+        return block

@@ -1,10 +1,10 @@
 """
 Abstract implementation of the Investee role as per AGR4BS
 
-InvesteeStateChange:
+InvesteeContextChange:
 
-The InvesteeStateChange exposes changes that need to be made to the
-Agent state when the Role is mounted and unmounted.
+The InvesteeContextChange exposes changes that need to be made to the
+Agent context when the Role is mounted and unmounted.
 
 Investee:
 
@@ -14,14 +14,14 @@ The Investee implementation which MUST contain the following behaviors :
 - redistribute_full
 """
 
-from ..role import Role, RoleType
+from .role import Role, RoleType
 from ..common import Investment
-from ..agent import Agent, StateChange
+from ..agents import Agent, ContextChange, AgentType
 
 
-class InvesteeStateChange(StateChange):
+class InvesteeContextChange(ContextChange):
     """
-        State changes that need to be made to the Agent when
+        Context changes that need to be made to the Agent when
         the associated Role (Investee) is either
         mounted or unmounted.
     """
@@ -45,11 +45,14 @@ class Investee(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.INVESTEE)
+        super().__init__(RoleType.INVESTEE, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    def state_change() -> StateChange:
-        return InvesteeStateChange()
+    def context_change() -> ContextChange:
+        """
+            Returns the ContextChange required when mounting / unmounting the Role
+        """
+        return InvesteeContextChange()
 
     @staticmethod
     def receive_investment(agent: Agent, investment: Investment, *args, **kwargs):
