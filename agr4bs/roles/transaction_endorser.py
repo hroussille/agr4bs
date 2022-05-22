@@ -14,7 +14,7 @@ The TransactionProposer implementation which MUST contain the following :
 
 from ..agents import Agent, ContextChange, AgentType
 from .role import Role, RoleType
-from ..common import Transaction
+from ..blockchain import Transaction
 
 
 class TransactionEndorserContextChange(ContextChange):

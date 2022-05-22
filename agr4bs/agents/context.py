@@ -16,8 +16,13 @@ class Context():
 
     def __init__(self):
         self._context = {}
+        self._references_count = {}
 
     def __getitem__(self, key):
+
+        if key not in self._context:
+            return None
+
         return self._context[key]
 
     def __iter__(self):
@@ -27,10 +32,9 @@ class Context():
     def __setitem__(self, key, value):
         self._context[key] = value
 
-    @staticmethod
-    def _is_init_function(reference) -> bool:
+    def _is_init_function(self, reference) -> bool:
 
-        if callable(reference) is False:
+        if not callable(reference):
             return False
 
         sig = inspect.signature(reference)
@@ -60,6 +64,11 @@ class Context():
                 else:
                     self._context[key] = value
 
+                self._references_count[key] = 1
+
+            else:
+                self._references_count[key] = self._references_count[key] + 1
+
     def revert_context_change(self, context_change: ContextChange) -> None:
         """
             Revert all the changes described in Context_change
@@ -69,4 +78,9 @@ class Context():
         """
 
         for key in context_change.unmount():
-            del self._context[key]
+            if key in self._context:
+                if self._references_count[key] == 1:
+                    del self._context[key]
+                    del self._references_count[key]
+                else:
+                    self._references_count[key] = self._references_count[key] - 1

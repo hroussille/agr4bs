@@ -5,11 +5,11 @@
 
 from ..state import State, Account, Receipt, StateChange
 from ..state import CreateAccount, AddBalance, RemoveBalance, IncrementAccountNonce
-from ..common import Transaction, Payload
+from ..blockchain import Transaction, Payload
 
 
 #pylint: disable=too-few-public-methods
-class DefaultVM:
+class VM:
 
     """
         Default Virtual Machine class implementation

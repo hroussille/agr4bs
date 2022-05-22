@@ -16,13 +16,12 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 - append_block
 """
 
-
 from ..agents import ExternalAgent, Context, ContextChange, AgentType
 from ..state import State, Receipt
-from ..vm import DefaultVM
-from .role import Role, RoleType
-from ..common import Block, Transaction
-from ..common import Blockchain
+from ..vm import VM
+from .role import Role, RoleType, on
+from ..blockchain import Block, Transaction
+from ..factory import Factory
 
 
 class BlockchainMaintainerContextChange(ContextChange):
@@ -37,18 +36,45 @@ class BlockchainMaintainerContextChange(ContextChange):
         self.receipts: dict[Receipt] = {}
         self.tx_pool: dict[Transaction] = {}
         self.tx_queue: dict[Transaction] = {}
-        self.vm = DefaultVM()
-        self.state = State()
+        self.vm = self.init_vm
         self.blockchain = self.init_blockchain
+        self.state = self.init_state
+
+    @staticmethod
+    def init_vm(context: Context):
+        """
+            Initialize the VM
+        """
+        factory: Factory = context['factory']
+
+        return factory.build_vm()
 
     @staticmethod
     def init_blockchain(context: Context):
         """
-            Initializes the property this function is associated to.
-            For the framework to recognize an init function it must
-            take a "context" parameter as first parameter.
+            Initialize the blockchain
         """
-        return Blockchain(context['genesis'])
+        factory: Factory = context['factory']
+        genesis: Block = context['genesis']
+
+        return factory.build_blockchain(genesis)
+
+    @staticmethod
+    def init_state(context: Context):
+        """
+            Initialize the state
+        """
+        factory: Factory = context['factory']
+        genesis: Block = context['genesis']
+        vm: VM = context['vm']
+
+        state: State = factory.build_state()
+
+        for tx in genesis.transactions:
+            changes = vm.process_tx(tx)
+            state.apply_batch_state_change(changes)
+
+        return state
 
 
 class BlockchainMaintainer(Role):
@@ -77,7 +103,8 @@ class BlockchainMaintainer(Role):
         return BlockchainMaintainerContextChange()
 
     @staticmethod
-    def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
+    @on('validate_transaction')
+    async def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Validate a specific transaction
 
             :param agent: the agent on which the behavior operates
@@ -98,6 +125,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @on('validate_block')
     def validate_block(agent: ExternalAgent, block: Block) -> bool:
         """ Validate a specific Block
 
@@ -115,6 +143,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @on('store_transaction')
     def store_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Store a specific transaction
 
@@ -132,6 +161,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @on('append_block')
     def append_block(agent: ExternalAgent, block: Block) -> bool:
         """ Append a specific block to the local blockchain
 
@@ -157,7 +187,8 @@ class BlockchainMaintainer(Role):
         return False
 
     @staticmethod
-    def execute_block(agent: ExternalAgent, block: Block) -> bool:
+    @on('execute_block')
+    async def execute_block(agent: ExternalAgent, block: Block) -> bool:
         """ Execute a specific Block
 
             :param block: the Block to execute
@@ -165,12 +196,14 @@ class BlockchainMaintainer(Role):
             :returns: wether the Block was executed successfully or not
             :rtype: bool
         """
+
         for tx in block.transactions:
             agent.behaviors.execute_transaction(agent, tx)
 
         return True
 
     @staticmethod
+    @on('reverse_block')
     def reverse_block(agent: ExternalAgent, block: Block) -> bool:
         """ Reverse a specific Block
 
@@ -190,6 +223,7 @@ class BlockchainMaintainer(Role):
             del agent.receipts[tx.hash]
 
     @staticmethod
+    @on('execute_transaction')
     def execute_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Execute a specific transaction
 
@@ -207,6 +241,7 @@ class BlockchainMaintainer(Role):
         agent.context["receipts"][tx.hash] = receipt
 
     @staticmethod
+    @on('reverse_transaction')
     def reverse_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Reverse a specific transaction
 

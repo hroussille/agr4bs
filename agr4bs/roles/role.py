@@ -37,7 +37,9 @@ class RoleType(Enum):
 
     BLOCKCHAIN_MAINTAINER = "BLOCKCHAIN_MAINTAINER"
     BLOCK_PROPOSER = "BLOCK_PROPOSER"
+    BLOCK_BUILDER = "BLOCK_SEQUENCER"
     BLOCK_ENDORSER = "BLOCK_ENDORSER"
+    BLOCK_SEQUENCER = "BLOCK_SEQUENCER"
     TRANSACTION_PROPOSER = "TRANSACTION_PROPOSER"
     TRANSACTION_ENDORSER = "TRANSACTION_ENDORSER"
     INVESTOR = "INVESTOR"
@@ -45,6 +47,31 @@ class RoleType(Enum):
     ORACLE = "ORACLE"
     CONTRACTOR = "CONTRACTOR"
     GROUP_MANAGER = "GROUP_MANAGER"
+    PEER = "PEER"
+
+
+# pylint: disable=too-few-public-methods
+# pylint: disable=invalid-name
+class on:
+
+    """
+        The on decorator adds the event names to the `on` property
+        of the function is decorates so that the framework can bind
+        the execution of the decorated function to the given events.
+    """
+
+    def __init__(self, event_name):
+        self._event_name = event_name
+
+    def __call__(self, function):
+
+        if hasattr(function, 'on'):
+            raise ValueError(
+                "Behaviors cannot be bound to more than one event")
+
+        function.on = self._event_name
+
+        return function
 
 
 class Role:
@@ -59,6 +86,7 @@ class Role:
     def __init__(self, _type: RoleType, agent_type: AgentType, dependencies: list[RoleType] = None) -> None:
         self._type = _type
         self._agent_type = agent_type
+        self._event_handlers = {}
 
         if dependencies is None:
             dependencies = []
@@ -78,13 +106,19 @@ class Role:
         """
         return ContextChange()
 
-    @staticmethod
-    def dependencies() -> list[RoleType]:
+    @property
+    def dependencies(self) -> list[RoleType]:
         """
             The dependencies function should return the list of RoleTypes that this Role relies on.
         """
-        return []
+        return self._dependencies
 
+    @property
+    def event_handlers(self) -> dict:
+        """ Get the event handlers of the Role
+
+            :returns: the dictionary of
+        """
     @property
     def behaviors(self) -> dict:
         """ Get the behaviors exposed by the Role
@@ -92,7 +126,7 @@ class Role:
             :returns: the dictionary of behaviors with the format {behavior_name: behavior_implementation}
             :rtype: dict
         """
-        return {behavior: implementation for behavior, implementation in self.__class__.__dict__.items() if behavior not in BindBlackList and isinstance(implementation, staticmethod)}
+        return {behavior: getattr(self, behavior) for behavior, implementation in self.__class__.__dict__.items() if behavior not in BindBlackList and isinstance(implementation, staticmethod)}
 
     @property
     def type(self) -> RoleType:

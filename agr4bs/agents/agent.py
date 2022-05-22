@@ -16,6 +16,7 @@ class AgentType(Enum):
     """
     EXTERNAL_AGENT = "external_agent"
     INTERNAL_AGENT = "internal_agent"
+    ENVIRONMENT_AGENT = "environment_agent"
 
 
 class Agent():
@@ -36,10 +37,17 @@ class Agent():
             :param initial_state: the initial state of the agent
             :type initial_state: dict
         """
-        self.name = name
+        self._name = name
         self._roles = {}
         self._context = Context()
         self._type = _type
+
+    @property
+    def name(self) -> str:
+        """
+            Get the name (i.e., address) of the agent
+        """
+        return self._name
 
     @property
     def roles(self) -> 'list[RoleType]':
@@ -58,6 +66,23 @@ class Agent():
             :rtype: Context
         """
         return self._context
+
+    def safe_inject(self, key: str, value: any):
+        """
+            Safely inject data into the Agent's context.
+            raises ValueError if the key already exists.
+        """
+        if key in self._context:
+            raise ValueError("inject_safe won't overwrite existing entry.")
+
+        self.unsafe_inject(key, value)
+
+    def unsafe_inject(self, key: str, value: any):
+        """
+            Injects and possibly overwrites data into the Agent's context
+            if the key is already in use.
+        """
+        self._context[key] = value
 
     @property
     def type(self) -> AgentType:
@@ -98,6 +123,11 @@ class Agent():
         """
         if self.has_role(role.type):
             return False
+
+        for dependency in role.dependencies:
+            if not self.has_role(dependency):
+                error = str(role.type) + " requires : " + str(dependency)
+                raise ValueError(error)
 
         if role.agent_type != self._type:
             raise ValueError(

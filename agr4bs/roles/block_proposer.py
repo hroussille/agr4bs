@@ -17,8 +17,7 @@ The BlockProposer implementation which MUST contain the following behaviors :
 
 from ..agents import Agent, ContextChange, AgentType
 from .role import Role, RoleType
-from ..common import Transaction
-from ..common import Block
+from ..blockchain import Block, Transaction
 
 
 class BlockProposerContextChange(ContextChange):
@@ -77,6 +76,7 @@ class BlockProposer(Role):
             :returns: the block with the transactions included in it
             :rtype: Block
         """
+
         raise NotImplementedError
 
     @staticmethod
