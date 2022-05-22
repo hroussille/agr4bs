@@ -4,8 +4,7 @@
 
 import asyncio
 import signal
-from tkinter import EXCEPTION
-import traceback
+import random
 
 from agr4bs.events.events import BOOTSTRAP_PEERS
 
@@ -124,9 +123,12 @@ class Environment(ExternalAgent):
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        for agent_name, agent in self._agents.items():
+        agents = list(self._agents.values())
+        random.shuffle(agents)
+
+        for agent in agents:
             tasks.append(asyncio.create_task(agent.run()))
-            await agent.fire_event(BOOTSTRAP_PEERS, self.generate_bootstrap_list(agent_name))
+            await agent.fire_event(BOOTSTRAP_PEERS, self.generate_bootstrap_list(agent.name))
 
         while not self._exit and not SIGNAL_FLAG:
 
@@ -140,5 +142,4 @@ class Environment(ExternalAgent):
 
         # Letting async message delivery finish
         await asyncio.sleep(0.25)
-
         await asyncio.gather(*tasks)

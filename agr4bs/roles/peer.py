@@ -74,11 +74,11 @@ class Peer(Role):
             :type candidates: list[str]
         """
 
-        n = min(len(candidates), agent.max_outbound_peers)
+        n = min(len(candidates), 4 * agent.max_outbound_peers)
         selected = random.sample(candidates, n)
 
         for candidate in selected:
-            await agent.send_request_inbound_peer(agent, candidate)
+            await agent.send_request_inbound_peer(candidate)
 
     @staticmethod
     async def register_peer_activity(agent: ExternalAgent, peer: str):
@@ -101,7 +101,7 @@ class Peer(Role):
             if current_time - agent.context['inbound_peers_activity'][inbound_peer] > agent.drop_time:
                 agent.context['inbound_peers'].remove(inbound_peer)
                 del agent.context['inbound_peers_activity'][inbound_peer]
-                await agent.notify_drop_inbound_peer(agent, inbound_peer)
+                await agent.notify_drop_inbound_peer(inbound_peer)
 
     @staticmethod
     async def send_request_peer_discover(agent: ExternalAgent):
@@ -135,7 +135,7 @@ class Peer(Role):
             :type peer: str
         """
 
-        await agent.register_peer_activity(agent, peer)
+        await agent.register_peer_activity(peer)
 
         inbound_peers = agent.context['inbound_peers']
 
@@ -157,7 +157,7 @@ class Peer(Role):
             :type peer: str
         """
 
-        await agent.register_peer_activity(agent, peer)
+        await agent.register_peer_activity(peer)
         agent.context['outbound_peers'].add(peer)
 
     @staticmethod
@@ -171,7 +171,7 @@ class Peer(Role):
             :type peer: str
         """
 
-        await agent.register_peer_activity(agent, peer)
+        await agent.register_peer_activity(peer)
 
         if peer in agent.context['inbound_peers']:
             agent.context['inbound_peers'].remove(peer)

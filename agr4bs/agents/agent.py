@@ -3,6 +3,7 @@
 """
 
 from enum import Enum
+
 from .context import Context
 
 
@@ -137,7 +138,7 @@ class Agent():
         self._context.apply_context_change(role.context_change())
 
         for behavior, implementation in role.behaviors.items():
-            setattr(self, behavior, implementation)
+            setattr(self, behavior, implementation.__get__(self, Agent))
 
         return True
 

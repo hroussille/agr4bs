@@ -33,9 +33,9 @@ class ExternalAgent(Agent):
         self.safe_inject('genesis', genesis)
         self.safe_inject('factory', factory)
 
-        self.drop_time = 0.5
-        self.max_inbound_peers = 10
-        self.max_outbound_peers = 4
+        self.drop_time = 5
+        self.max_inbound_peers = 2
+        self.max_outbound_peers = 2
 
         self._network = factory.build_network()
         self._message_queue = asyncio.Queue()
