@@ -2,4 +2,5 @@
     agr4bs network submodule
 """
 
-from .network import Network
+from .asyncio_network import AioNetwork
+from .messages import Message, MessageType
