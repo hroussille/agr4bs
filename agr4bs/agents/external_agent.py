@@ -33,7 +33,7 @@ class ExternalAgent(Agent):
         self.safe_inject('genesis', genesis)
         self.safe_inject('factory', factory)
 
-        self.drop_time = 1
+        self.drop_time = 0.5
         self.max_inbound_peers = 10
         self.max_outbound_peers = 4
 
@@ -86,11 +86,9 @@ class ExternalAgent(Agent):
         """
             Fire a specific event and wait for the handler(s) to finish
         """
-        loop = asyncio.get_event_loop()
-
         if event in self._event_handlers:
             for event_handler in self._event_handlers[event]:
-                loop.create_task(event_handler(self, *args, **kwargs))
+                await event_handler(self, *args, **kwargs)
 
     async def send_message(self, message: Message, to: Union[str, list[str]]):
         """

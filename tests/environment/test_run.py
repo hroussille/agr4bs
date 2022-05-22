@@ -15,7 +15,7 @@ async def test_run():
 
     agents = []
 
-    for i in range(100):
+    for i in range(2000):
         agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
         agent.add_role(agr4bs.roles.Peer())
         agents.append(agent)

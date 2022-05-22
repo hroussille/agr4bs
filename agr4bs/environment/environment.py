@@ -137,6 +137,8 @@ class Environment(ExternalAgent):
             await asyncio.sleep(0)
 
         await self._notify_stop_simulation()
+
         # Letting async message delivery finish
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.25)
+
         await asyncio.gather(*tasks)

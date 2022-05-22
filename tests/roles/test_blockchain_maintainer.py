@@ -2,7 +2,6 @@
     Test suite for the BlockchainMaintainer Role
 """
 
-import asyncio
 import agr4bs
 
 

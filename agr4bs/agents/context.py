@@ -32,7 +32,8 @@ class Context():
     def __setitem__(self, key, value):
         self._context[key] = value
 
-    def _is_init_function(self, reference) -> bool:
+    @staticmethod
+    def _is_init_function(reference) -> bool:
 
         if not callable(reference):
             return False
