@@ -15,7 +15,7 @@ async def test_run():
 
     agents = []
 
-    for i in range(20):
+    for i in range(100):
         agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
         agent.add_role(agr4bs.roles.Peer())
         agents.append(agent)
@@ -26,6 +26,7 @@ async def test_run():
         env.add_agent(agent)
 
     env_task = asyncio.create_task(env.run())
-    await asyncio.sleep(1)
+
+    await asyncio.sleep(0.5)
     await env.stop()
-    await asyncio.gather(env_task)
+    await env_task

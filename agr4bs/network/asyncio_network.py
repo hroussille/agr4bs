@@ -72,7 +72,7 @@ class AioNetwork():
                     delay = random.random() * self.delay
                     queue = self._queues[recipient]
                     asyncio.create_task(
-                        self._deliver_message(queue, message, delay))
+                        self._deliver_message(queue, message, delay), name="message_delivery")
 
     async def flush_agent(self, agent: 'ExternalAgent') -> None:
         """ Flush an ExternalAgent out of the Network

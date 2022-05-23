@@ -74,7 +74,7 @@ class Peer(Role):
             :type candidates: list[str]
         """
 
-        n = min(len(candidates), 4 * agent.max_outbound_peers)
+        n = min(len(candidates), 2 * agent.max_outbound_peers)
         selected = random.sample(candidates, n)
 
         for candidate in selected:

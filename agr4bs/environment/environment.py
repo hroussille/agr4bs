@@ -118,7 +118,7 @@ class Environment(ExternalAgent):
 
     async def run(self):
 
-        tasks = []
+        agent_tasks = []
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
@@ -127,7 +127,7 @@ class Environment(ExternalAgent):
         random.shuffle(agents)
 
         for agent in agents:
-            tasks.append(asyncio.create_task(agent.run()))
+            agent_tasks.append(asyncio.create_task(agent.run()))
             await agent.fire_event(BOOTSTRAP_PEERS, self.generate_bootstrap_list(agent.name))
 
         while not self._exit and not SIGNAL_FLAG:
@@ -139,7 +139,7 @@ class Environment(ExternalAgent):
             await asyncio.sleep(0)
 
         await self._notify_stop_simulation()
-
-        # Letting async message delivery finish
-        await asyncio.sleep(0.25)
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*agent_tasks)
+        
+        message_tasks = [task for task in asyncio.all_tasks() if task.get_name() == "message_delivery"]
+        await asyncio.gather(*message_tasks)
