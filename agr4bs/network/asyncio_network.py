@@ -6,7 +6,7 @@ import asyncio
 import random
 
 from agr4bs.network.messages import Message
-from ..agents import AgentType
+from ..agents.agent import AgentType
 
 
 class AioNetwork():
@@ -37,8 +37,13 @@ class AioNetwork():
         """
         return self._drop_rate
 
-    async def _deliver_message(self, queue: asyncio.Queue, message: Message, delay: float):
-        await asyncio.sleep(delay)
+    @staticmethod
+    async def _deliver_message(queue: asyncio.Queue, message: Message, delay: float):
+        """
+            Deliver a given message to a given Queue by applying a simulated network delay
+        """
+        if delay > 0:
+            await asyncio.sleep(delay)
 
         try:
             queue.put_nowait(message)

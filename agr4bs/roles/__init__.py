@@ -1,7 +1,7 @@
 """
     Wrapper module over the different Roles exising in AGR4BS.
 """
-from .role import Role, RoleType, on
+from .role import Role, RoleType
 from .block_endorser import BlockEndorser
 from .block_proposer import BlockProposer
 from .blockchain_maintainer import BlockchainMaintainer

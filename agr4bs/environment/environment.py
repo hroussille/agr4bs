@@ -7,8 +7,6 @@ import signal
 import random
 
 from agr4bs.events.events import BOOTSTRAP_PEERS
-
-from ..events import INIT
 from ..network.messages import StopSimulation
 from ..agents import ExternalAgent
 from ..factory import Factory
@@ -17,7 +15,13 @@ SIGNAL_FLAG = False
 EXCEPTION_FLAG = False
 
 
+# pylint: disable=unused-argument
 def signal_handler(*args):
+    """
+        Global signal handler for OS signals
+    """
+
+    # pylint: disable=global-statement
     global SIGNAL_FLAG
     SIGNAL_FLAG = True
 
@@ -102,6 +106,9 @@ class Environment(ExternalAgent):
         return self._agents[agent_name]
 
     def generate_bootstrap_list(self, agent_name: str):
+        """
+            Generate a peer bootstrap list for a specific agent
+        """
         return [name for name in self._agents if name != agent_name]
 
     async def stop(self):
@@ -111,6 +118,10 @@ class Environment(ExternalAgent):
         self._exit = True
 
     async def _notify_stop_simulation(self):
+        """
+            Notify every agent that the simulation should stop.
+            This is done through system messages.
+        """
 
         message = StopSimulation(self._name)
         to = list(self._agents.keys())
@@ -118,6 +129,16 @@ class Environment(ExternalAgent):
 
     async def run(self):
 
+        """
+            Run the main logic of the environment :
+
+            - bind OS signals
+            - Bootstrap agents peers
+            - Run main loop
+            - notify stop simulation
+            - cleanup agent tasks
+            - cleanup message tasks
+        """
         agent_tasks = []
 
         signal.signal(signal.SIGINT, signal_handler)
@@ -140,6 +161,7 @@ class Environment(ExternalAgent):
 
         await self._notify_stop_simulation()
         await asyncio.gather(*agent_tasks)
-        
-        message_tasks = [task for task in asyncio.all_tasks() if task.get_name() == "message_delivery"]
+
+        message_tasks = [task for task in asyncio.all_tasks(
+        ) if task.get_name() == "message_delivery"]
         await asyncio.gather(*message_tasks)

@@ -19,7 +19,8 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 from ..agents import ExternalAgent, Context, ContextChange, AgentType
 from ..state import State, Receipt
 from ..vm import VM
-from .role import Role, RoleType, on
+from ..roles.role import Role, RoleType
+from ..common import on
 from ..blockchain import Block, Transaction
 from ..factory import Factory
 

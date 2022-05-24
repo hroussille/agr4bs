@@ -89,16 +89,4 @@ class InternalAgent(Agent):
             the execution environment. The InternalAgentRequest should be either handled or
             rejected.
         """
-
-    def fallback(self, request: InternalAgentCall):
-        """
-            This method is called when receiving no value with data
-            It is only called is no other method matches the InternalAgentRequest.
-        """
-        return InternalAgentResponse(True, "fallback not implemented")
-
-    def receive(self, request: InternalAgentCall) -> InternalAgentResponse:
-        """
-            This method is called when receiving value without data
-        """
-        return InternalAgentResponse(True, "cannot receive value")
+        raise NotImplementedError()

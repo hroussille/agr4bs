@@ -1,4 +1,7 @@
 
+"""
+    agr4bs.events submodule
+"""
 
 from .events import REQUEST_INBOUND_PEER
 from .events import ACCEPT_INBOUND_PEER

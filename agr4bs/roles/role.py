@@ -3,19 +3,12 @@
     Role file class implementation
 """
 
-from enum import Enum, EnumMeta
+from enum import Enum
+from ..common import IterableEnumMeta
 from ..agents import ContextChange, AgentType
 
 
-class BindBlackListMeta(EnumMeta):
-    """
-        Meta class to allow Enum retrieval as a list
-    """
-    def __contains__(cls, item):
-        return item in [v.value for v in cls.__members__.values()]
-
-
-class BindBlackList(Enum, metaclass=BindBlackListMeta):
+class BindBlackList(Enum, metaclass=IterableEnumMeta):
     """
         Enumeration of the black listed Roles static methods
         (i.e., behaviors).
@@ -48,30 +41,6 @@ class RoleType(Enum):
     CONTRACTOR = "CONTRACTOR"
     GROUP_MANAGER = "GROUP_MANAGER"
     PEER = "PEER"
-
-
-# pylint: disable=too-few-public-methods
-# pylint: disable=invalid-name
-class on:
-
-    """
-        The on decorator adds the event names to the `on` property
-        of the function is decorates so that the framework can bind
-        the execution of the decorated function to the given events.
-    """
-
-    def __init__(self, event_name):
-        self._event_name = event_name
-
-    def __call__(self, function):
-
-        if hasattr(function, 'on'):
-            raise ValueError(
-                "Behaviors cannot be bound to more than one event")
-
-        function.on = self._event_name
-
-        return function
 
 
 class Role:

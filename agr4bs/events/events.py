@@ -1,4 +1,8 @@
 
+"""
+    Core Events definitions
+"""
+
 # Seed nodes events
 BOOTSTRAP_PEERS = "request_seed_list"
 

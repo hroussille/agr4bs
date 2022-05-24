@@ -7,11 +7,12 @@ import asyncio
 from collections import defaultdict
 from typing import Union
 
-from agr4bs.events.events import STOP_SIMULATION, UPDATE_PEERS
+from ..events import STOP_SIMULATION
 from ..network import Message, MessageType
 from .agent import Agent, AgentType
 from ..blockchain import Block
 from ..factory import Factory
+from .schedulable import Schedulable
 
 
 class ExternalAgent(Agent):
@@ -40,6 +41,7 @@ class ExternalAgent(Agent):
         self._network = factory.build_network()
         self._message_queue = asyncio.Queue()
         self._event_handlers = defaultdict(list)
+        self._schedulables = {}
         self._exit = False
 
         self._add_event_handler(STOP_SIMULATION, self.stop_simulation_handler)
@@ -59,6 +61,10 @@ class ExternalAgent(Agent):
             if hasattr(implementation, 'on'):
                 self._add_event_handler(implementation.on, implementation)
 
+            elif hasattr(implementation, 'frequency'):
+                frequency = implementation.frequency
+                self._add_schedulable(frequency, implementation)
+
     def remove_role(self, role: 'Role') -> bool:
         super().remove_role(role)
 
@@ -67,6 +73,9 @@ class ExternalAgent(Agent):
             if hasattr(implementation, 'on'):
                 self._remove_event_handler(implementation.on, implementation)
 
+            elif hasattr(implementation, 'frequency'):
+                self._remove_schedulable(implementation)
+
     def _add_event_handler(self, event, handler):
 
         if handler not in self._event_handlers[event]:
@@ -74,6 +83,12 @@ class ExternalAgent(Agent):
 
     def _remove_event_handler(self, event, handler):
         self._event_handlers[event].remove(handler)
+
+    def _add_schedulable(self, frequency: int, handler: callable):
+        self._schedulables[handler] = Schedulable(frequency, handler)
+
+    def _remove_schedulable(self, handler):
+        del self._schedulables[handler]
 
     async def stop_simulation_handler(self):
         """
@@ -129,12 +144,29 @@ class ExternalAgent(Agent):
         else:
             await self.fire_event(message.event, *message.data)
 
+    async def _run_schedulables(self):
+        time = asyncio.get_event_loop().time()
+
+        for schedulable in self._schedulables.values():
+            if schedulable.should_run(time):
+                await schedulable.handler(self)
+                schedulable.update(time)
+
+    async def _init_schedulables(self):
+        time = asyncio.get_event_loop().time()
+
+        for schedulable in self._schedulables.values():
+            schedulable.update(time)
+
     async def run(self):
         """
             Run the agent :
             - handle messages
             - handle schedules events
         """
+
+        await self._init_schedulables()
+
         while not self._exit:
 
             message = await self._get_next_message()
@@ -142,8 +174,5 @@ class ExternalAgent(Agent):
             if message is not None:
                 await self._handle_message(message)
 
-            await self.fire_event(UPDATE_PEERS)
-
-            # TODO: Fire scheduled events
-
+            await self._run_schedulables()
             await asyncio.sleep(0)

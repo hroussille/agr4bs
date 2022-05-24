@@ -71,6 +71,6 @@ class Factory:
             Builds a black box Network implementation
         """
         if Factory.__network is None or reset is True:
-            Factory.__network = AioNetwork(delay=0.1, drop_rate=0.01)
+            Factory.__network = AioNetwork(delay=0.060, drop_rate=0.005)
 
         return Factory.__network

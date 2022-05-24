@@ -19,11 +19,12 @@ import asyncio
 from agr4bs.events.events import DROP_INBOUND_PEER
 
 from agr4bs.network.messages import AcceptInboundPeer, DenyInboundPeer, DropInboundPeer, RequestInboundPeer
-from ..events import BOOTSTRAP_PEERS, UPDATE_PEERS, REQUEST_PEER_DISCOVERY
+from ..events import BOOTSTRAP_PEERS, REQUEST_PEER_DISCOVERY
 from ..events import REQUEST_INBOUND_PEER
 from ..events import ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER
 from ..agents import ExternalAgent, ContextChange, AgentType
-from .role import Role, RoleType, on
+from .role import Role, RoleType
+from ..common import on, every, SECONDS
 
 
 class PeerContextChange(ContextChange):
@@ -89,12 +90,11 @@ class Peer(Role):
         agent.context['inbound_peers_activity'][peer] = current_time
 
     @staticmethod
-    @on(UPDATE_PEERS)
+    @every(2, SECONDS)
     async def drop_inactive_peers(agent: ExternalAgent):
         """
             Cleanup inactive inbound peers.
         """
-
         current_time = asyncio.get_event_loop().time()
 
         for inbound_peer in agent.context['inbound_peers'].copy():
@@ -104,13 +104,21 @@ class Peer(Role):
                 await agent.notify_drop_inbound_peer(inbound_peer)
 
     @staticmethod
-    async def send_request_peer_discover(agent: ExternalAgent):
-        pass
+    async def send_request_peer_discover(agent: ExternalAgent, peer: str):
+        """ Send a peer discovery request to a specific peer
+
+            :param agent: The Agent on which the behavior operates
+            :type agent: ExternalAgent
+            :param peer: the address of the peer
+            :type peer: str
+        """
 
     @staticmethod
     @on(REQUEST_PEER_DISCOVERY)
     async def receive_request_peer_discovery(agent: ExternalAgent):
-        pass
+        """
+            Handle a REQUEST_PEER_DISCOVERY event
+        """
 
     @staticmethod
     async def send_request_inbound_peer(agent: ExternalAgent, peer: str):
@@ -193,6 +201,9 @@ class Peer(Role):
     @staticmethod
     @on(DROP_INBOUND_PEER)
     async def receive_drop_inbound_peer(agent: ExternalAgent, peer: str):
+        """
+            Handles a DROP_INBOUND_PEER event.
+        """
         if peer in agent.context['outbound_peers']:
             agent.context['outbound_peers'].remove(peer)
 
