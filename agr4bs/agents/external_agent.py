@@ -7,7 +7,7 @@ import asyncio
 from collections import defaultdict
 from typing import Union
 
-from ..events import STOP_SIMULATION
+from ..events import INIT, STOP_SIMULATION, RECEIVE_MESSAGE, SEND_MESSAGE, CLEANUP
 from ..network import Message, MessageType
 from .agent import Agent, AgentType
 from ..blockchain import Block
@@ -34,9 +34,9 @@ class ExternalAgent(Agent):
         self.safe_inject('genesis', genesis)
         self.safe_inject('factory', factory)
 
-        self.drop_time = 5
-        self.max_inbound_peers = 2
-        self.max_outbound_peers = 2
+        self.drop_time = 30
+        self.max_inbound_peers = 10
+        self.max_outbound_peers = 3
 
         self._network = factory.build_network()
         self._message_queue = asyncio.Queue()
@@ -105,14 +105,15 @@ class ExternalAgent(Agent):
             for event_handler in self._event_handlers[event]:
                 await event_handler(self, *args, **kwargs)
 
-    async def send_message(self, message: Message, to: Union[str, list[str]]):
+    async def send_message(self, message: Message, to: Union[str, list[str]], no_drop=False):
         """
             Send a Message to one or many agents
         """
         if not isinstance(to, list):
             to = [to]
 
-        await self._network.send_message(message, to)
+        await self._network.send_message(message, to, no_drop)
+        await self.fire_event(SEND_MESSAGE, to)
 
     async def send_system_message(self, message: Message, to: Union[str, list[str]]):
         """
@@ -122,6 +123,7 @@ class ExternalAgent(Agent):
             to = [to]
 
         await self._network.send_message(message, to)
+        await self.fire_event(SEND_MESSAGE, to)
 
     async def _get_next_message(self):
         """
@@ -129,6 +131,7 @@ class ExternalAgent(Agent):
         """
         try:
             message = self._message_queue.get_nowait()
+            await self.fire_event(RECEIVE_MESSAGE, message.origin)
         except asyncio.QueueEmpty:
             message = None
 
@@ -166,6 +169,7 @@ class ExternalAgent(Agent):
         """
 
         await self._init_schedulables()
+        await self.fire_event(INIT)
 
         while not self._exit:
 
@@ -176,3 +180,5 @@ class ExternalAgent(Agent):
 
             await self._run_schedulables()
             await asyncio.sleep(0)
+
+        await self.fire_event(CLEANUP)

@@ -13,3 +13,4 @@ from .oracle import Oracle
 from .transaction_endorser import TransactionEndorser
 from .transaction_proposer import TransactionProposer
 from .peer import Peer
+from .bootstrap import Bootstrap

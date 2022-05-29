@@ -44,7 +44,9 @@ def test_block_proposer_addition():
     agent = agr4bs.ExternalAgent("agent_0", genesis)
     role = agr4bs.roles.BlockProposer()
 
+    agent.add_role(agr4bs.roles.Peer())
     agent.add_role(agr4bs.roles.BlockchainMaintainer())
+
     agent.add_role(role)
 
     assert agent.has_role(agr4bs.RoleType.BLOCK_PROPOSER)
@@ -71,7 +73,9 @@ def test_block_proposer_removal():
     agent = agr4bs.ExternalAgent("agent_0", genesis)
     role = agr4bs.roles.BlockProposer()
 
+    agent.add_role(agr4bs.roles.Peer())
     agent.add_role(agr4bs.roles.BlockchainMaintainer())
+
     agent.add_role(role)
     agent.remove_role(role)
 

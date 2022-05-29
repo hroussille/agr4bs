@@ -17,6 +17,7 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 """
 
 from ..agents import ExternalAgent, Context, ContextChange, AgentType
+from ..events import RECEIVE_BLOCK, RECEIVE_TRANSACTION
 from ..state import State, Receipt
 from ..vm import VM
 from ..roles.role import Role, RoleType
@@ -94,7 +95,10 @@ class BlockchainMaintainer(Role):
     """
 
     def __init__(self) -> None:
-        super().__init__(RoleType.BLOCKCHAIN_MAINTAINER, AgentType.EXTERNAL_AGENT)
+        dependencies = [RoleType.PEER]
+
+        super().__init__(RoleType.BLOCKCHAIN_MAINTAINER,
+                         AgentType.EXTERNAL_AGENT, dependencies)
 
     @staticmethod
     def context_change() -> ContextChange:
@@ -104,7 +108,37 @@ class BlockchainMaintainer(Role):
         return BlockchainMaintainerContextChange()
 
     @staticmethod
-    @on('validate_transaction')
+    @on(RECEIVE_TRANSACTION)
+    async def receive_transactiom(agent: ExternalAgent, tx: Transaction):
+        tx_hash = tx.compute_hash()
+
+        # Transaction is already known
+        if tx_hash in agent.context['txpool'] or tx_hash in agent.context['receipts']:
+            return
+
+        # Skip invalid transactions
+        if agent.validate_transaction(tx) is False:
+            return
+
+        # Record transactions in the mempool
+        agent.store_transaction(tx)
+
+    @staticmethod
+    @on(RECEIVE_BLOCK)
+    async def receive_block(agent: ExternalAgent, block: Block):
+        block_hash = block.compute_hash()
+
+        # Block is already known
+        if agent.context['blockchain'].has_block(block_hash):
+            return
+
+        # Skip invalid blocks
+        if agent.validate_block(block) is False:
+            return
+
+        agent.append_block(block)
+
+    @staticmethod
     async def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Validate a specific transaction
 
@@ -126,7 +160,6 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
-    @on('validate_block')
     def validate_block(agent: ExternalAgent, block: Block) -> bool:
         """ Validate a specific Block
 
@@ -144,7 +177,6 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
-    @on('store_transaction')
     def store_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Store a specific transaction
 
@@ -162,7 +194,6 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
-    @on('append_block')
     def append_block(agent: ExternalAgent, block: Block) -> bool:
         """ Append a specific block to the local blockchain
 
@@ -188,7 +219,6 @@ class BlockchainMaintainer(Role):
         return False
 
     @staticmethod
-    @on('execute_block')
     async def execute_block(agent: ExternalAgent, block: Block) -> bool:
         """ Execute a specific Block
 
@@ -204,7 +234,6 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
-    @on('reverse_block')
     def reverse_block(agent: ExternalAgent, block: Block) -> bool:
         """ Reverse a specific Block
 
@@ -224,7 +253,6 @@ class BlockchainMaintainer(Role):
             del agent.receipts[tx.hash]
 
     @staticmethod
-    @on('execute_transaction')
     def execute_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Execute a specific transaction
 
@@ -242,7 +270,6 @@ class BlockchainMaintainer(Role):
         agent.context["receipts"][tx.hash] = receipt
 
     @staticmethod
-    @on('reverse_transaction')
     def reverse_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Reverse a specific transaction
 

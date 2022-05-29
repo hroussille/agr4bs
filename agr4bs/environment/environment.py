@@ -6,7 +6,9 @@ import asyncio
 import signal
 import random
 
-from agr4bs.events.events import BOOTSTRAP_PEERS
+
+from ..agents import AgentType
+from ..events import BOOTSTRAP_PEERS
 from ..network.messages import StopSimulation
 from ..agents import ExternalAgent
 from ..factory import Factory
@@ -41,6 +43,20 @@ class Environment(ExternalAgent):
     def __init__(self, factory: Factory = None):
         super().__init__("environment", None, factory)
         self._agents = {}
+        self._network.register_agent(self)
+        self._agent_tasks = []
+        self._running = False
+
+    @property
+    def agents_names(self):
+        """
+            Get the list of agent names
+        """
+        return list(self._agents.keys())
+
+    @property
+    def running(self):
+        return self._running
 
     def add_agent(self, agent: ExternalAgent):
         """ Add an Agent to the Environment
@@ -55,6 +71,9 @@ class Environment(ExternalAgent):
 
         self._agents[agent.name] = agent
         self._network.register_agent(agent)
+
+        if self._running is True:
+            self._run_agent(agent)
 
     async def remove_agent(self, agent: ExternalAgent):
         """ Remove an Agent from the Environment
@@ -127,6 +146,17 @@ class Environment(ExternalAgent):
         to = list(self._agents.keys())
         await self._network.send_system_message(message, to)
 
+    def _run_agent(self, agent):
+        self._agent_tasks.append(asyncio.create_task(agent.run()))
+
+    async def _wait_agent_tasks(self):
+        await asyncio.gather(*self._agent_tasks)
+
+    async def _wait_message_tasks(self):
+        message_tasks = [task for task in asyncio.all_tasks(
+        ) if task.get_name() == "message_delivery"]
+        await asyncio.gather(*message_tasks)
+
     async def run(self):
 
         """
@@ -139,7 +169,8 @@ class Environment(ExternalAgent):
             - cleanup agent tasks
             - cleanup message tasks
         """
-        agent_tasks = []
+
+        self._running = True
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
@@ -148,8 +179,7 @@ class Environment(ExternalAgent):
         random.shuffle(agents)
 
         for agent in agents:
-            agent_tasks.append(asyncio.create_task(agent.run()))
-            await agent.fire_event(BOOTSTRAP_PEERS, self.generate_bootstrap_list(agent.name))
+            self._run_agent(agent)
 
         while not self._exit and not SIGNAL_FLAG:
 
@@ -160,8 +190,7 @@ class Environment(ExternalAgent):
             await asyncio.sleep(0)
 
         await self._notify_stop_simulation()
-        await asyncio.gather(*agent_tasks)
+        await self._wait_agent_tasks()
+        await self._wait_message_tasks()
 
-        message_tasks = [task for task in asyncio.all_tasks(
-        ) if task.get_name() == "message_delivery"]
-        await asyncio.gather(*message_tasks)
+        self._running = False

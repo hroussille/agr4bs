@@ -54,7 +54,6 @@ class AioNetwork():
     async def send_system_message(self, message: Message, to: list[str]) -> None:
         """
             Send a system message to the network.
-
             System messages are not subject to delay or drops.
         """
         delivery_tasks = []
@@ -66,14 +65,14 @@ class AioNetwork():
 
         await asyncio.gather(*delivery_tasks)
 
-    async def send_message(self, message: Message, to: list[str]) -> None:
+    async def send_message(self, message: Message, to: list[str], no_drop=False) -> None:
         """
             Send a message to the network.
         """
 
         for recipient in to:
             if recipient in self._queues:
-                if random.random() > self.drop_rate:
+                if random.random() > self.drop_rate or no_drop is True:
                     delay = random.random() * self.delay
                     queue = self._queues[recipient]
                     asyncio.create_task(
@@ -89,7 +88,6 @@ class AioNetwork():
             raise ValueError("Flushing non existing agent")
 
         del self._queues[agent.name]
-        # TODO: Send agent disconnected to all agents
 
     def register_agent(self, agent: 'ExternalAgent') -> None:
         """

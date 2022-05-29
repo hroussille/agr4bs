@@ -41,6 +41,7 @@ class RoleType(Enum):
     CONTRACTOR = "CONTRACTOR"
     GROUP_MANAGER = "GROUP_MANAGER"
     PEER = "PEER"
+    BOOTSTRAP = "BOOTSTRAP"
 
 
 class Role:

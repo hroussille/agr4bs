@@ -47,6 +47,8 @@ def test_blockchain_maintainer_addition():
     genesis = agr4bs.Block(None, None, [])
     agent = agr4bs.ExternalAgent("agent_0", genesis)
     role = agr4bs.roles.BlockchainMaintainer()
+
+    agent.add_role(agr4bs.roles.Peer())
     agent.add_role(role)
 
     for behavior in role.behaviors:
@@ -71,7 +73,9 @@ def test_blockchain_maintainer_removal():
     agent = agr4bs.ExternalAgent("agent_0", genesis)
     role = agr4bs.roles.BlockchainMaintainer()
 
+    agent.add_role(agr4bs.roles.Peer())
     agent.add_role(role)
+
     agent.remove_role(role)
 
     assert agent.has_role(agr4bs.RoleType.BLOCKCHAIN_MAINTAINER) is False

@@ -3,6 +3,9 @@
 """
 
 from enum import Enum
+
+from agr4bs.events.events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
+from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
 from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER, DROP_INBOUND_PEER
 from ..events import STOP_SIMULATION
 
@@ -12,7 +15,6 @@ class MessageType(Enum):
     """
         Enumeration of the allowed message types
     """
-
     REQUEST_INBOUND_PEER = 1
     ACCEPT_INBOUND_PEER = 2
     DENY_INBOUND_PEER = 3
@@ -40,6 +42,12 @@ class MessageType(Enum):
     STOP_SIMULATION = 20
 
     CUSTOM_MESSAGE = 21
+
+    REQUEST_BOOTSTRAP_PEERS = 22
+    BOOTSTRAP_PEERS = 23
+
+    REQUEST_PEER_DISCOVERY = 24
+    PEER_DISCOVERY = 25
 
 
 class Message:
@@ -83,6 +91,40 @@ class Message:
             Get the data contained in the Message
         """
         return self._data
+
+
+class RequestBootstrapPeers(Message):
+
+    """
+        Message sent when an Agent whishes to get a list of bootstraping
+        peer nodes in the Network.
+    """
+
+    def __init__(self, origin: str):
+        _type = MessageType.REQUEST_BOOTSTRAP_PEERS
+        _event = REQUEST_BOOTSTRAP_PEERS
+        super().__init__(origin, _type, _event, origin)
+
+
+class BootStrapPeers(Message):
+    def __init__(self, origin: str, bootstrap_list: list[str]):
+        _type = MessageType.BOOTSTRAP_PEERS
+        _event = BOOTSTRAP_PEERS
+        super().__init__(origin, _type, _event, bootstrap_list)
+
+
+class RequestPeerDiscovery(Message):
+    def __init__(self, origin: str):
+        _type = MessageType.REQUEST_PEER_DISCOVERY
+        _event = REQUEST_PEER_DISCOVERY
+        super().__init__(origin, _type, _event, origin)
+
+
+class PeerDiscovery(Message):
+    def __init__(self, origin: str, peers: list[str]):
+        _type = MessageType.PEER_DISCOVERY
+        _event = PEER_DISCOVERY
+        super().__init__(origin, _type, _event, peers)
 
 
 class RequestInboundPeer(Message):
