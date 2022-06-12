@@ -36,7 +36,7 @@ class ExternalAgent(Agent):
 
         self.drop_time = 30
         self.max_inbound_peers = 10
-        self.max_outbound_peers = 3
+        self.max_outbound_peers = 5
 
         self._network = factory.build_network()
         self._message_queue = asyncio.Queue()

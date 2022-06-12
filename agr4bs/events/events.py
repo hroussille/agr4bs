@@ -29,6 +29,7 @@ DENY_OUTBOUND_PEER = "deny_outbound_peer"
 DROP_OUTBOUND_PEER = "drop_outbound_peer"
 
 # Block events
+CREATE_BLOCK = "create_block"
 RECEIVE_BLOCK = "receive_block"
 REQUEST_BLOCK = "request_block"
 RECEIVE_REQUEST_BLOCKS = "receive_request_block"

@@ -171,6 +171,13 @@ class Peer(Role):
     @staticmethod
     @every(0.25, SECONDS)
     async def find_outbound_peer(agent: ExternalAgent):
+        """
+            Periodically look for new outbound peers if we have some connections to spare.
+
+            If we have no known peer, request bootstrap from the Environment
+            Otherwise, select a random peer from known peers that are not already inbound peers
+            and send a connection request to it.
+        """
 
         if len(agent.context['peer_registry']) == 0:
             return
@@ -191,12 +198,18 @@ class Peer(Role):
     @staticmethod
     @every(1, SECONDS)
     async def trigger_peer_discovery(agent: ExternalAgent):
+        """
+            Periodically send peer discovery requests to known peers that are not already
+            inbound peers.
+
+            The answer will be handled later to populate the peer registry.
+        """
 
         n_outbound_peers = len(agent.context['outbound_peers'])
 
         if n_outbound_peers >= agent.max_outbound_peers:
             return
-        elif n_outbound_peers == 0:
+        if n_outbound_peers == 0:
             await agent.send_request_bootstrap_peers()
         else:
             all_known_peers = list(agent.context['peer_registry'])
@@ -232,6 +245,14 @@ class Peer(Role):
     @staticmethod
     @on(PEER_DISCOVERY)
     async def receive_peer_discovery(agent: ExternalAgent, new_peers: list[str]):
+
+        """
+            Behavior called on PEER_DISCOVERY event.
+
+            The peer answers a peer_discovery_request with a list of known peers (i.e., its registry)
+            which is then merged with the local registry to be used later on in order to establish new
+            connections.
+        """
 
         for peer in new_peers:
             if peer != agent.name:

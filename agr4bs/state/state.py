@@ -2,6 +2,7 @@
     State file class implementation
 """
 
+from math import inf
 import pickle
 from .state_change import StateChange, StateChangeType
 from .state_change import UpdateAccountStorage
@@ -26,6 +27,7 @@ class State:
 
     def __init__(self) -> None:
         self._accounts: dict(Account) = {}
+        self._create_account(CreateAccount(Account('genesis', inf)))
 
     def _apply_jump_table(self, state_change_type: StateChangeType) -> None:
         """
@@ -115,7 +117,7 @@ class State:
             Internal method: decrement an Account nonce
         """
 
-        if not self.has_account(state_change.account):
+        if not self.has_account(state_change.account_name):
             raise ValueError("Cannot decrement nonce of non existing Account")
 
         self._accounts[state_change.account_name].decrement_nonce()

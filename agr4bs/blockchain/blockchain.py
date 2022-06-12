@@ -20,6 +20,8 @@ class Blockchain():
     """
 
     def __init__(self, genesis: Block) -> None:
+
+        genesis.compute_hash()
         self._genesis = genesis
         self._head = self._genesis
         self._blocks = {}
@@ -37,6 +39,7 @@ class Blockchain():
         """
         if _hash in self._blocks:
             return self._blocks[_hash]
+
         return None
 
     def get_chain(self) -> list[Block]:
@@ -206,10 +209,15 @@ class Blockchain():
                 block_b, block_b.height - block_a.height)
 
         while block_a.parent_hash is not None and block_b.parent_hash is not None:
+
             if block_a == block_b:
                 return block_a
+
             block_a = self._blocks[block_a.parent_hash]
             block_b = self._blocks[block_b.parent_hash]
+
+        if block_a == block_b and block_a == self.genesis:
+            return self.genesis
 
         raise ValueError("Blocks have no common ancestor")
 

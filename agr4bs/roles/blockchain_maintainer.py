@@ -16,6 +16,8 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 - append_block
 """
 
+from agr4bs.state.account import Account
+from agr4bs.state.state_change import AddBalance, CreateAccount, RemoveBalance
 from ..agents import ExternalAgent, Context, ContextChange, AgentType
 from ..events import RECEIVE_BLOCK, RECEIVE_TRANSACTION
 from ..state import State, Receipt
@@ -24,6 +26,7 @@ from ..roles.role import Role, RoleType
 from ..common import on
 from ..blockchain import Block, Transaction
 from ..factory import Factory
+from ..network.messages import DiffuseBlock
 
 
 class BlockchainMaintainerContextChange(ContextChange):
@@ -110,6 +113,13 @@ class BlockchainMaintainer(Role):
     @staticmethod
     @on(RECEIVE_TRANSACTION)
     async def receive_transactiom(agent: ExternalAgent, tx: Transaction):
+
+        """
+            Behavior called on a RECEIVE_TRANSACTIOn event
+            It is responsible for validating the transaction and storing it
+            in the memory pool if it passes the checks.
+        """
+
         tx_hash = tx.compute_hash()
 
         # Transaction is already known
@@ -126,10 +136,17 @@ class BlockchainMaintainer(Role):
     @staticmethod
     @on(RECEIVE_BLOCK)
     async def receive_block(agent: ExternalAgent, block: Block):
+
+        """
+            Behavior called on RECEIVE_BLOCK event.
+            It is responsible for validating the block and appending and
+            triggering it's addition to the blockchain.
+        """
+
         block_hash = block.compute_hash()
 
         # Block is already known
-        if agent.context['blockchain'].has_block(block_hash):
+        if agent.context['blockchain'].get_block(block_hash):
             return
 
         # Skip invalid blocks
@@ -138,8 +155,11 @@ class BlockchainMaintainer(Role):
 
         agent.append_block(block)
 
+        outbound_peers = list(agent.context['outbound_peers'])
+        await agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)
+
     @staticmethod
-    async def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
+    def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Validate a specific transaction
 
             :param agent: the agent on which the behavior operates
@@ -149,7 +169,14 @@ class BlockchainMaintainer(Role):
             :returns: wether the transaction is valid or not
             :rtype: bool
         """
-        sender_account = agent.state.get_account(tx.origin)
+
+        sender_account = agent.context['state'].get_account(tx.origin)
+
+        if tx.hash in agent.context['receipts']:
+            return False
+
+        if sender_account is None:
+            return False
 
         if sender_account.balance < tx.amount + tx.fee:
             return False
@@ -170,8 +197,12 @@ class BlockchainMaintainer(Role):
             :returns: wether the block is valid or not
             :rtype: bool
         """
+
+        if block.compute_hash() != block.hash:
+            return False
+
         for tx in block.transactions:
-            if agent.behaviors.validate_transaction(tx) is False:
+            if agent.validate_transaction(tx) is False:
                 return False
 
         return True
@@ -204,22 +235,22 @@ class BlockchainMaintainer(Role):
             :returns: wether the block was appended or not
             :rtype: bool
         """
-        if agent.behaviors.validate_block(agent, block):
-            res, reverted_blocks, added_blocks = agent.blockchain.add_block(
+        if agent.validate_block(block):
+            res, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(
                 block)
 
             for reverted_block in reverted_blocks:
-                agent.behaviors.reverse_block(agent, reverted_block)
+                agent.reverse_block(reverted_block)
 
             for added_block in added_blocks:
-                agent.behaviors.execute_block(agent, added_block)
+                agent.execute_block(added_block)
 
             return res
 
         return False
 
     @staticmethod
-    async def execute_block(agent: ExternalAgent, block: Block) -> bool:
+    def execute_block(agent: ExternalAgent, block: Block) -> bool:
         """ Execute a specific Block
 
             :param block: the Block to execute
@@ -229,7 +260,14 @@ class BlockchainMaintainer(Role):
         """
 
         for tx in block.transactions:
-            agent.behaviors.execute_transaction(agent, tx)
+            agent.execute_transaction(tx)
+
+        if agent.context['state'].get_account(block.creator) is None:
+            change = CreateAccount(Account(block.creator, 10))
+        else:
+            change = AddBalance(block.creator, 10)
+
+        agent.context["state"].apply_state_change(change)
 
         return True
 
@@ -242,17 +280,21 @@ class BlockchainMaintainer(Role):
             :returns: wether the Block was reversed successfully or not
             :rtype: bool
         """
-        for tx in block.transactions.reverse():
+
+        agent.context["state"].apply_state_change(
+            RemoveBalance(block.creator, 10))
+
+        for tx in reversed(block.transactions):
             # Reverse the transaction state changes
-            agent.behaviors.reverse_transaction(agent, tx)
+            agent.reverse_transaction(tx)
 
             # Push the tx back onto the txpool
-            agent.txpool[tx.hash] = tx
+            # agent.txpool[tx.hash] = tx
 
             # Delete the Receipt entry
-            del agent.receipts[tx.hash]
+            del agent.context['receipts'][tx.hash]
 
-    @staticmethod
+    @ staticmethod
     def execute_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Execute a specific transaction
 
@@ -261,15 +303,15 @@ class BlockchainMaintainer(Role):
             :returns: wether the transaction was executed successfully or not
             :rtype: bool
         """
-        if tx.hash in agent.receipts:
+        if tx.hash in agent.context['receipts']:
             raise ValueError("Executing an already seen transaction.")
 
-        receipt = agent.execution_environment.process_tx(
+        receipt = agent.context['vm'].process_tx(
             agent.context["state"].copy(), tx)
-        agent.context["state"].apply_batch_state_change(receipt.changes)
+        agent.context["state"].apply_batch_state_change(receipt.state_changes)
         agent.context["receipts"][tx.hash] = receipt
 
-    @staticmethod
+    @ staticmethod
     def reverse_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Reverse a specific transaction
 
@@ -278,12 +320,12 @@ class BlockchainMaintainer(Role):
             :returns: wether the transaction was reverted successfully or not
             :rtype: bool
         """
-        if tx.hash not in agent.receipts:
+        if tx.hash not in agent.context['receipts']:
             raise ValueError("Reversing an uknown transaction")
 
-        receipt: Receipt = agent.receipts[tx.hash]
+        receipt: Receipt = agent.context['receipts'][tx.hash]
 
-        changes = receipt.state_changes.reverse()
-        agent.state.apply_batch_state_change(changes)
+        changes = [sc.revert() for sc in reversed(receipt.state_changes)]
+        agent.context['state'].apply_batch_state_change(changes)
 
         return True

@@ -15,7 +15,11 @@ The BlockProposer implementation which MUST contain the following behaviors :
 - propose_block
 """
 
-from ..agents import Agent, ContextChange, AgentType
+
+from ..agents import ExternalAgent, ContextChange, AgentType
+from ..events import CREATE_BLOCK
+from ..network.messages import DiffuseBlock
+from ..common import on
 from .role import Role, RoleType
 from ..blockchain import Block, Transaction
 
@@ -57,7 +61,7 @@ class BlockProposer(Role):
         return BlockProposerContextChange()
 
     @staticmethod
-    def select_transaction(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> list[Transaction]:
+    def select_transaction(agent: ExternalAgent, transactions: list[Transaction]) -> list[Transaction]:
         """ Select a subset of transactions for inclusion in a block
 
             :param transactions: the available transactions
@@ -65,10 +69,23 @@ class BlockProposer(Role):
             :returns: the list of selected transactions
             :rtype: list[Transaction]
         """
-        raise NotImplementedError
+        return []
 
     @staticmethod
-    def create_block(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> Block:
+    @on(CREATE_BLOCK)
+    async def can_create_block(agent: ExternalAgent):
+
+        """
+            Behavior called on CREATE_BLOCK event. This is a system event triggered
+            by the Environment.
+
+            It is a one time authorization to create and propose a new Block to the network.
+        """
+
+        await agent.propose_block(agent.create_block([]))
+
+    @staticmethod
+    def create_block(agent: ExternalAgent, transactions: list[Transaction]) -> Block:
         """ Creates a block with the given transactions
 
             :param transactions: the transactions to include in the block
@@ -76,14 +93,15 @@ class BlockProposer(Role):
             :returns: the block with the transactions included in it
             :rtype: Block
         """
-
-        raise NotImplementedError
+        head_hash = agent.context['blockchain'].head.hash
+        return Block(head_hash, agent.name, transactions)
 
     @staticmethod
-    def propose_block(block: Block, *args, **kwargs):
+    async def propose_block(agent: ExternalAgent, block: Block):
         """ Propose a block to the network
 
             :param block: the block to propose to the network
             :type block: Block
         """
-        raise NotImplementedError
+        outbound_peers = list(agent.context['outbound_peers'])
+        await agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)

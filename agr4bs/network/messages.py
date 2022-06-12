@@ -4,10 +4,13 @@
 
 from enum import Enum
 
-from agr4bs.events.events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
+from ..events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
 from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
 from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER, DROP_INBOUND_PEER
 from ..events import STOP_SIMULATION
+from ..events import CREATE_BLOCK, RECEIVE_BLOCK
+
+from ..blockchain import Block
 
 
 class MessageType(Enum):
@@ -15,6 +18,7 @@ class MessageType(Enum):
     """
         Enumeration of the allowed message types
     """
+
     REQUEST_INBOUND_PEER = 1
     ACCEPT_INBOUND_PEER = 2
     DENY_INBOUND_PEER = 3
@@ -25,29 +29,31 @@ class MessageType(Enum):
     DENY_OUTBOUND_PEER = 7
     DROP_OUTBOUND_PEER = 8
 
-    PROPOSE_BLOCK = 9
+    CREATE_BLOCK = 9
     REQUEST_BLOCK = 10
+    PROPOSE_BLOCK = 11
+    DIFFUSE_BLOCK = 12
 
-    REQUEST_BLOCK_ENDORSEMENT = 11
-    ACCEPT_BLOCK_ENDORSEMENT = 12
-    DENY_BLOCK_ENDORSEMENT = 13
+    REQUEST_BLOCK_ENDORSEMENT = 13
+    ACCEPT_BLOCK_ENDORSEMENT = 14
+    DENY_BLOCK_ENDORSEMENT = 15
 
-    DIFFUSE_TRANSACTION = 14
-    REQUEST_TRANSACTION_ENDORSEMENT = 15
-    ACCEPT_TRANSACTION_ENDORSEMENT = 16
-    DENY_TRANSACTION_ENDORSEMENT = 17
+    DIFFUSE_TRANSACTION = 16
+    REQUEST_TRANSACTION_ENDORSEMENT = 17
+    ACCEPT_TRANSACTION_ENDORSEMENT = 18
+    DENY_TRANSACTION_ENDORSEMENT = 19
 
-    PAUSE_SIMULATION = 18
-    RESTART_SIMULATION = 19
-    STOP_SIMULATION = 20
+    PAUSE_SIMULATION = 20
+    RESTART_SIMULATION = 21
+    STOP_SIMULATION = 22
 
-    CUSTOM_MESSAGE = 21
+    CUSTOM_MESSAGE = 23
 
-    REQUEST_BOOTSTRAP_PEERS = 22
-    BOOTSTRAP_PEERS = 23
+    REQUEST_BOOTSTRAP_PEERS = 24
+    BOOTSTRAP_PEERS = 25
 
-    REQUEST_PEER_DISCOVERY = 24
-    PEER_DISCOVERY = 25
+    REQUEST_PEER_DISCOVERY = 26
+    PEER_DISCOVERY = 26
 
 
 class Message:
@@ -107,6 +113,11 @@ class RequestBootstrapPeers(Message):
 
 
 class BootStrapPeers(Message):
+
+    """
+        Message sent to agents to give them the list of bootstraping nodes
+    """
+
     def __init__(self, origin: str, bootstrap_list: list[str]):
         _type = MessageType.BOOTSTRAP_PEERS
         _event = BOOTSTRAP_PEERS
@@ -114,6 +125,11 @@ class BootStrapPeers(Message):
 
 
 class RequestPeerDiscovery(Message):
+
+    """
+        Message sent to other agents to request peer discovery
+    """
+
     def __init__(self, origin: str):
         _type = MessageType.REQUEST_PEER_DISCOVERY
         _event = REQUEST_PEER_DISCOVERY
@@ -121,6 +137,11 @@ class RequestPeerDiscovery(Message):
 
 
 class PeerDiscovery(Message):
+
+    """
+        Message sent to an agent that previously requested peer discovery
+    """
+
     def __init__(self, origin: str, peers: list[str]):
         _type = MessageType.PEER_DISCOVERY
         _event = PEER_DISCOVERY
@@ -193,3 +214,40 @@ class StopSimulation(Message):
         _type = MessageType.STOP_SIMULATION
         _event = STOP_SIMULATION
         super().__init__(origin, _type, _event)
+
+
+class CreateBlock(Message):
+
+    """
+        System Message sent to notify an agent that it can create
+        a Block.
+    """
+
+    def __init__(self, origin: str):
+        _type = MessageType.CREATE_BLOCK
+        _event = CREATE_BLOCK
+        super().__init__(origin, _type, _event)
+
+
+class ProposeBlock(Message):
+
+    """
+        Message sent to propose a newly created block to other participants.
+    """
+
+    def __init__(self, origin: str, block: Block):
+        _type = MessageType.PROPOSE_BLOCK
+        _event = RECEIVE_BLOCK
+        super().__init__(origin, _type, _event, Block.from_serialized(block.serialize()))
+
+
+class DiffuseBlock(Message):
+
+    """
+        Message sent to diffuse a block to the network
+    """
+
+    def __init__(self, origin: str, block: Block):
+        _type = MessageType.PROPOSE_BLOCK
+        _event = RECEIVE_BLOCK
+        super().__init__(origin, _type, _event, Block.from_serialized(block.serialize()))

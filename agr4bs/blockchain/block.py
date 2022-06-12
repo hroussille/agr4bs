@@ -76,6 +76,13 @@ class Block(Serializable):
         """
         return self._hash
 
+    @hash.setter
+    def hash(self, value: str):
+        """
+            Manually set the hash of the Block
+        """
+        self._hash = value
+
     @property
     def height(self) -> int:
         """ Get the height of the Block

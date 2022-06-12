@@ -14,10 +14,11 @@ from agr4bs.state.state_change import AddBalance, RemoveBalance
 def test_state_initial_state():
     """
         Test that a State is initially empty
+        except for the genesis account
     """
     state = agr4bs.State()
 
-    assert not state.account_names()
+    assert state.account_names() == ['genesis']
 
 
 def test_state_create_account_change():

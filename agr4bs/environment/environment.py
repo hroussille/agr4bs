@@ -6,9 +6,6 @@ import asyncio
 import signal
 import random
 
-
-from ..agents import AgentType
-from ..events import BOOTSTRAP_PEERS
 from ..network.messages import StopSimulation
 from ..agents import ExternalAgent
 from ..factory import Factory
@@ -56,6 +53,9 @@ class Environment(ExternalAgent):
 
     @property
     def running(self):
+        """
+            Get the indicator about the running status of the environment.
+        """
         return self._running
 
     def add_agent(self, agent: ExternalAgent):
@@ -152,7 +152,8 @@ class Environment(ExternalAgent):
     async def _wait_agent_tasks(self):
         await asyncio.gather(*self._agent_tasks)
 
-    async def _wait_message_tasks(self):
+    @staticmethod
+    async def _wait_message_tasks():
         message_tasks = [task for task in asyncio.all_tasks(
         ) if task.get_name() == "message_delivery"]
         await asyncio.gather(*message_tasks)
@@ -181,12 +182,15 @@ class Environment(ExternalAgent):
         for agent in agents:
             self._run_agent(agent)
 
+        await self._init_schedulables()
+
         while not self._exit and not SIGNAL_FLAG:
 
             message = await self._get_next_message()
             if message is not None:
                 await self._handle_message(message)
 
+            await self._run_schedulables()
             await asyncio.sleep(0)
 
         await self._notify_stop_simulation()

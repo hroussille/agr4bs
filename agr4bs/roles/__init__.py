@@ -14,3 +14,4 @@ from .transaction_endorser import TransactionEndorser
 from .transaction_proposer import TransactionProposer
 from .peer import Peer
 from .bootstrap import Bootstrap
+from .block_creator_elector import BlockCreatorElector
