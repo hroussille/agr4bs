@@ -44,6 +44,9 @@ class BlockchainMaintainerContextChange(ContextChange):
         self.vm = self.init_vm
         self.blockchain = self.init_blockchain
         self.state = self.init_state
+        self.blocks_received = 0
+        self.blocks_reverted = 0
+        self.invalid_count = 0
 
     @staticmethod
     def init_vm(context: Context):
@@ -145,6 +148,8 @@ class BlockchainMaintainer(Role):
 
         block_hash = block.compute_hash()
 
+        agent.context['blocks_received'] += 1
+
         # Block is already known
         if agent.context['blockchain'].get_block(block_hash):
             return
@@ -239,8 +244,12 @@ class BlockchainMaintainer(Role):
             res, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(
                 block)
 
+            if res is False:
+                agent.context['invalid_count'] += 1
+
             for reverted_block in reverted_blocks:
                 agent.reverse_block(reverted_block)
+                agent.context['blocks_reverted'] += 1
 
             for added_block in added_blocks:
                 agent.execute_block(added_block)
