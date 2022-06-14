@@ -284,8 +284,9 @@ class Blockchain():
         dependent_blocks = self._unstage_blocks(block)
 
         for dependent_block in dependent_blocks:
-            if self.add_block_strict(dependent_block) is not True:
-                raise ValueError("Chain is corrupted.")
+            if dependent_block.hash not in self._blocks:
+                if self.add_block_strict(dependent_block) is not True:
+                    raise ValueError("Chain is corrupted.")
 
         added_blocks += len(dependent_blocks)
 
