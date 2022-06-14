@@ -24,7 +24,9 @@ from .events import STOP_SIMULATION
 from .events import CLEANUP
 from .events import INIT
 from .events import REQUEST_BOOTSTRAP_PEERS
+from .events import REQUEST_BOOTSTRAP_STATIC_PEERS
 from .events import BOOTSTRAP_PEERS
+from .events import BOOTSTRAP_STATIC_PEERS
 from .events import REQUEST_PEER_DISCOVERY
 from .events import PEER_DISCOVERY
 from .events import RECEIVE_MESSAGE

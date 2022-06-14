@@ -9,7 +9,9 @@ RECEIVE_MESSAGE = "receive_message"
 
 # Seed nodes events
 REQUEST_BOOTSTRAP_PEERS = "request_bootstrap_peers"
+REQUEST_BOOTSTRAP_STATIC_PEERS = "request_static_bootstrap_peers"
 BOOTSTRAP_PEERS = "bootstrap_peers"
+BOOTSTRAP_STATIC_PEERS = "bootstrap_static_peers"
 
 # P2P update events
 UPDATE_PEERS = "update_peers"
