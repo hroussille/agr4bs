@@ -9,6 +9,7 @@ import random
 from ..network.messages import StopSimulation
 from ..agents import ExternalAgent
 from ..factory import Factory
+from ..events import INIT
 
 SIGNAL_FLAG = False
 EXCEPTION_FLAG = False
@@ -183,6 +184,7 @@ class Environment(ExternalAgent):
             self._run_agent(agent)
 
         await self._init_schedulables()
+        await self.fire_event(INIT)
 
         while not self._exit and not SIGNAL_FLAG:
 
