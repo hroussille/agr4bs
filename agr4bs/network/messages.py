@@ -4,6 +4,7 @@
 
 from enum import Enum
 
+from ..events import REQUEST_BOOTSTRAP_STATIC_PEERS, BOOTSTRAP_STATIC_PEERS
 from ..events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
 from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
 from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER, DROP_INBOUND_PEER
@@ -52,8 +53,11 @@ class MessageType(Enum):
     REQUEST_BOOTSTRAP_PEERS = 24
     BOOTSTRAP_PEERS = 25
 
-    REQUEST_PEER_DISCOVERY = 26
-    PEER_DISCOVERY = 26
+    REQUEST_BOOTSTRAP_STATIC_PEERS = 26
+    BOOTSTRAP_STATIC_PEERS = 27
+
+    REQUEST_PEER_DISCOVERY = 28
+    PEER_DISCOVERY = 29
 
 
 class Message:
@@ -112,6 +116,19 @@ class RequestBootstrapPeers(Message):
         super().__init__(origin, _type, _event, origin)
 
 
+class RequestBootstrapStaticPeers(Message):
+
+    """
+        Message sent when an Agent whishes to get the lists of static
+        bostraping peer nodes in the network.
+    """
+
+    def __init__(self, origin: str):
+        _type = MessageType.REQUEST_BOOTSTRAP_STATIC_PEERS
+        _event = REQUEST_BOOTSTRAP_STATIC_PEERS
+        super().__init__(origin, _type, _event, origin)
+
+
 class BootStrapPeers(Message):
 
     """
@@ -122,6 +139,18 @@ class BootStrapPeers(Message):
         _type = MessageType.BOOTSTRAP_PEERS
         _event = BOOTSTRAP_PEERS
         super().__init__(origin, _type, _event, bootstrap_list)
+
+
+class BootStrapStaticPeers(Message):
+
+    """
+        Message sent to agents to give them the static list of bootstraping nodes
+    """
+
+    def __init__(self, origin: str, inbound_bootsrap_list: list[str], outbound_bootstrap_list: list[str]):
+        _type = MessageType.BOOTSTRAP_STATIC_PEERS
+        _event = BOOTSTRAP_STATIC_PEERS
+        super().__init__(origin, _type, _event, inbound_bootsrap_list, outbound_bootstrap_list)
 
 
 class RequestPeerDiscovery(Message):
