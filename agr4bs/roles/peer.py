@@ -182,6 +182,9 @@ class Peer(Role):
         if len(agent.context['peer_registry']) == 0:
             return
 
+        if len(agent.context['outbound_peers']) == agent.max_outbound_peers:
+            return
+
         all_known_peers = list(agent.context['peer_registry'])
         inbounds = agent.context['inbound_peers']
         outbounds = agent.context['outbound_peers']
