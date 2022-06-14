@@ -13,5 +13,7 @@ from .oracle import Oracle
 from .transaction_endorser import TransactionEndorser
 from .transaction_proposer import TransactionProposer
 from .peer import Peer
+from .static_peer import StaticPeer
 from .bootstrap import Bootstrap
+from .static_bootstrap import StaticBootstrap
 from .block_creator_elector import BlockCreatorElector
