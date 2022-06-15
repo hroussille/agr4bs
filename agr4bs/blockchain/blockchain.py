@@ -198,7 +198,7 @@ class Blockchain():
     def find_common_ancestor(self, block_a: Block, block_b: Block) -> Block:
         """
             Find the first common ancestor of block_a and block_b
-            Worst case is the genesis block
+            Worst case is assumed to be the genesis block
         """
 
         if block_a.height > block_b.height:
