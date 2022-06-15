@@ -21,7 +21,7 @@ async def test_block_creation():
 
     agents = []
 
-    for i in range(50):
+    for i in range(10):
         agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
         agent.add_role(agr4bs.roles.Peer())
         agent.add_role(agr4bs.roles.BlockchainMaintainer())
@@ -46,11 +46,6 @@ async def test_block_creation():
     await env.stop()
     await env_task
 
-    # heights = np.array(
-    #    [agent.context['blockchain'].head.height for agent in agents])
-    #avg_height = np.average(heights)
-    #std_height = np.std(heights)
-
     head_hashes = [agent.context['blockchain'].head.hash for agent in agents]
     head_counts = Counter(head_hashes)
 
@@ -58,10 +53,3 @@ async def test_block_creation():
     # i.e., state is consensual
     for _, head_count in head_counts.items():
         assert head_count / len(agents) == 1
-
-    #print("Average blockchain height : " + str(avg_height))
-    #print("Std dev height : " + str(std_height))
-
-    # for head_hash, head_count in head_counts.items():
-    #    print("Head : " + head_hash + " : " +
-    #          str(100 * head_count / len(agents)) + " % ")

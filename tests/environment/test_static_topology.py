@@ -22,7 +22,7 @@ async def test_block_creation():
 
     agents: ExternalAgent = []
 
-    for i in range(1000):
+    for i in range(50):
         agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
         agent.add_role(agr4bs.roles.StaticPeer())
         agents.append(agent)
@@ -35,7 +35,7 @@ async def test_block_creation():
 
     env_task = asyncio.create_task(env.run())
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(1)
 
     await env.stop()
     await env_task

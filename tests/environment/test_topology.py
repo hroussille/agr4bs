@@ -35,7 +35,7 @@ async def test_block_creation():
 
     env_task = asyncio.create_task(env.run())
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
 
     await env.stop()
     await env_task

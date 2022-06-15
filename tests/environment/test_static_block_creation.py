@@ -4,7 +4,6 @@
 
 import random
 import asyncio
-import numpy as np
 from collections import Counter
 import agr4bs
 
@@ -46,17 +45,9 @@ async def test_block_creation():
     await env.stop()
     await env_task
 
-    # heights = np.array(
-    #    [agent.context['blockchain'].head.height for agent in agents])
-    #avg_height = np.average(heights)
-    #std_height = np.std(heights)
-
     heads = [agent.context['blockchain'].head for agent in agents]
     head_hashes = [head.hash for head in heads]
     head_counts = Counter(head_hashes)
-
-    #print("Average blockchain height : " + str(avg_height))
-    #print("Std dev height : " + str(std_height))
 
     # Ensure that one head is shared by all agents
     # i.e., state is consensual
