@@ -4,7 +4,6 @@
 
 import random
 import asyncio
-import numpy as np
 from collections import Counter
 import agr4bs
 

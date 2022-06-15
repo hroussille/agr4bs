@@ -4,8 +4,6 @@
 
 import random
 import asyncio
-import numpy as np
-from collections import Counter
 import agr4bs
 from agr4bs.agents.external_agent import ExternalAgent
 
