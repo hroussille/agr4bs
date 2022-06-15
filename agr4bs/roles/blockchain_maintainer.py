@@ -186,7 +186,7 @@ class BlockchainMaintainer(Role):
         if sender_account.balance < tx.amount + tx.fee:
             return False
 
-        if sender_account.nonce < tx.nonce:
+        if sender_account.nonce != tx.nonce:
             return False
 
         return True
