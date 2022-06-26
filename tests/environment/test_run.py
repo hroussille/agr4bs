@@ -2,8 +2,8 @@
     Test suite for the Environment class related to agents addition
 """
 
-import asyncio
 import agr4bs
+import datetime
 
 
 async def test_run():
@@ -16,20 +16,21 @@ async def test_run():
 
     agents = []
 
-    for i in range(50):
+    for i in range(10):
         agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.Factory)
-        agent.add_role(agr4bs.roles.Peer())
+        agent.add_role(agr4bs.roles.StaticPeer())
         agents.append(agent)
 
     env = agr4bs.Environment(agr4bs.Factory)
-    env.add_role(agr4bs.roles.Bootstrap())
+    env.add_role(agr4bs.roles.StaticBootstrap())
 
     for agent in agents:
         env.add_agent(agent)
 
-    env_task = asyncio.create_task(env.run())
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
 
-    await asyncio.sleep(5)
+    def condition(environment: agr4bs.Environment) -> bool:
+        return environment.date < epoch + datetime.timedelta(minutes=10)
 
-    await env.stop()
-    await env_task
+    scheduler.run(condition)
