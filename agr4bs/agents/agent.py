@@ -74,7 +74,8 @@ class Agent():
             raises ValueError if the key already exists.
         """
         if key in self._context:
-            raise ValueError("inject_safe won't overwrite existing entry.")
+            raise ValueError(
+                "inject_safe won't overwrite existing entry : " + str(key))
 
         self.unsafe_inject(key, value)
 

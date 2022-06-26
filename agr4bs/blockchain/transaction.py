@@ -20,10 +20,10 @@ class Transaction(Serializable):
     """
 
     #pylint: disable=too-many-arguments
-    def __init__(self, origin: str, to: str, nonce: int, fee: int = 0,  amount: int = 0, payload: Payload = None) -> None:
+    def __init__(self, origin: str, to: str, nonce: int, fee: int = 0,  value: int = 0, payload: Payload = None) -> None:
         self._origin = origin
         self._to = to
-        self._amount = amount
+        self._value = value
         self._fee = fee
         self._nonce = nonce
 
@@ -61,13 +61,13 @@ class Transaction(Serializable):
         return self._nonce
 
     @property
-    def amount(self) -> int:
-        """ Get the amount sent within the Transaction
+    def value(self) -> int:
+        """ Get the value sent within the Transaction
 
-            :returns: the amount sent within the Transaction
+            :returns: the value sent within the Transaction
             :rtype: int
         """
-        return self._amount
+        return self._value
 
     @property
     def fee(self) -> int:
@@ -110,7 +110,7 @@ class Transaction(Serializable):
             :rtype: str
         """
         hash_dict = {'from': self._origin, 'to': self._to,
-                     'amount': self._amount, 'fee': self._fee, 'payload': self._payload.serialize()}
+                     'value': self._value, 'fee': self._fee, 'payload': self._payload.serialize()}
 
         return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()
 

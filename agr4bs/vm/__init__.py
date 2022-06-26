@@ -3,3 +3,4 @@
 """
 
 from .default_vm import VM
+from .execution_context import ExecutionContext

@@ -55,3 +55,6 @@ PAUSE_SIMULATION = "pause_simulation"
 RESTART_SIMULATION = "restart_simulation"
 STOP_SIMULATION = "stop_simulation"
 CLEANUP = "cleanup"
+
+# Schedulable events
+RUN_SCHEDULABLE = "run_schedulable"

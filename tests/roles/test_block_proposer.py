@@ -41,7 +41,7 @@ def test_block_proposer_addition():
     - Agent has all the BlockProposer context changes
     """
     genesis = agr4bs.Block(None, "genesis")
-    agent = agr4bs.ExternalAgent("agent_0", genesis)
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.BlockProposer()
 
     agent.add_role(agr4bs.roles.Peer())
@@ -70,7 +70,7 @@ def test_block_proposer_removal():
     - Agent has none of the BlockProposer context changes
     """
     genesis = agr4bs.Block(None, "genesis")
-    agent = agr4bs.ExternalAgent("agent_0", genesis)
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.BlockProposer()
 
     agent.add_role(agr4bs.roles.Peer())

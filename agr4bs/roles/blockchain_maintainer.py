@@ -23,13 +23,14 @@ from ..events import RECEIVE_BLOCK, RECEIVE_TRANSACTION
 from ..state import State, Receipt
 from ..vm import VM
 from ..roles.role import Role, RoleType
-from ..common import on
+from ..common import on, export
 from ..blockchain import Block, Transaction
 from ..factory import Factory
 from ..network.messages import DiffuseBlock
 
 
 class BlockchainMaintainerContextChange(ContextChange):
+
     """
         Context changes that need to be made to the ExternalAgent when
         the associated Role (BlockchainMaintainer) is either
@@ -114,9 +115,9 @@ class BlockchainMaintainer(Role):
         return BlockchainMaintainerContextChange()
 
     @staticmethod
+    @export
     @on(RECEIVE_TRANSACTION)
-    async def receive_transactiom(agent: ExternalAgent, tx: Transaction):
-
+    def receive_transactiom(agent: ExternalAgent, tx: Transaction):
         """
             Behavior called on a RECEIVE_TRANSACTIOn event
             It is responsible for validating the transaction and storing it
@@ -137,9 +138,9 @@ class BlockchainMaintainer(Role):
         agent.store_transaction(tx)
 
     @staticmethod
+    @export
     @on(RECEIVE_BLOCK)
-    async def receive_block(agent: ExternalAgent, block: Block):
-
+    def receive_block(agent: ExternalAgent, block: Block):
         """
             Behavior called on RECEIVE_BLOCK event.
             It is responsible for validating the block and appending and
@@ -161,9 +162,10 @@ class BlockchainMaintainer(Role):
         agent.append_block(block)
 
         outbound_peers = list(agent.context['outbound_peers'])
-        await agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)
+        agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)
 
     @staticmethod
+    @export
     def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Validate a specific transaction
 
@@ -192,6 +194,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @export
     def validate_block(agent: ExternalAgent, block: Block) -> bool:
         """ Validate a specific Block
 
@@ -213,6 +216,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @export
     def store_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Store a specific transaction
 
@@ -230,6 +234,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @export
     def append_block(agent: ExternalAgent, block: Block) -> bool:
         """ Append a specific block to the local blockchain
 
@@ -259,6 +264,7 @@ class BlockchainMaintainer(Role):
         return False
 
     @staticmethod
+    @export
     def execute_block(agent: ExternalAgent, block: Block) -> bool:
         """ Execute a specific Block
 
@@ -281,6 +287,7 @@ class BlockchainMaintainer(Role):
         return True
 
     @staticmethod
+    @export
     def reverse_block(agent: ExternalAgent, block: Block) -> bool:
         """ Reverse a specific Block
 
@@ -303,7 +310,8 @@ class BlockchainMaintainer(Role):
             # Delete the Receipt entry
             del agent.context['receipts'][tx.hash]
 
-    @ staticmethod
+    @staticmethod
+    @export
     def execute_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Execute a specific transaction
 
@@ -320,7 +328,8 @@ class BlockchainMaintainer(Role):
         agent.context["state"].apply_batch_state_change(receipt.state_changes)
         agent.context["receipts"][tx.hash] = receipt
 
-    @ staticmethod
+    @staticmethod
+    @export
     def reverse_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
         """ Reverse a specific transaction
 

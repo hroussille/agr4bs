@@ -1,32 +1,12 @@
 """
     Environment file class implementation
 """
-
-import asyncio
-import signal
 import random
 
 from ..network.messages import StopSimulation
 from ..agents import ExternalAgent
 from ..factory import Factory
-from ..events import INIT
-
-SIGNAL_FLAG = False
-EXCEPTION_FLAG = False
-
-
-# pylint: disable=unused-argument
-def signal_handler(*args):
-    """
-        Global signal handler for OS signals
-    """
-
-    # pylint: disable=global-statement
-    global SIGNAL_FLAG
-    SIGNAL_FLAG = True
-
-    print("Received kill signal !")
-    print("Stopping simulation...")
+from agr4bs import agents
 
 
 class Environment(ExternalAgent):
@@ -38,7 +18,7 @@ class Environment(ExternalAgent):
         to form a complete simulation.
     """
 
-    def __init__(self, factory: Factory = None):
+    def __init__(self, factory: Factory):
         super().__init__("environment", None, factory)
         self._agents = {}
         self._network.register_agent(self)
@@ -74,9 +54,9 @@ class Environment(ExternalAgent):
         self._network.register_agent(agent)
 
         if self._running is True:
-            self._run_agent(agent)
+            agent.init(self._date)
 
-    async def remove_agent(self, agent: ExternalAgent):
+    def remove_agent(self, agent: ExternalAgent):
         """ Remove an Agent from the Environment
 
             :param agent: the Agent to remove from the Environment
@@ -87,7 +67,9 @@ class Environment(ExternalAgent):
             raise ValueError(
                 "Attempting to remove a non existing agent from the environment")
 
-        await self._network.flush_agent(agent)
+        self._network.flush_agent(agent)
+        agent.cleanup()
+
         del self._agents[agent.name]
 
     def has_agent(self, agent: ExternalAgent) -> bool:
@@ -125,19 +107,32 @@ class Environment(ExternalAgent):
 
         return self._agents[agent_name]
 
-    def generate_bootstrap_list(self, agent_name: str):
-        """
-            Generate a peer bootstrap list for a specific agent
-        """
-        return [name for name in self._agents if name != agent_name]
+    def init(self, date):
 
-    async def stop(self):
+        super().init(date)
+
+        agents_names = self.agents_names
+        random.shuffle(agents_names)
+
+        for agent_name in agents_names:
+            self._agents[agent_name].init(date)
+
+    def cleanup(self):
+        super().cleanup()
+
+        agents_names = self.agents_names
+        random.shuffle(agents_names)
+
+        for agent_name in agents_names:
+            self._agents[agent_name].cleanup()
+
+    def stop(self):
         """
             Set the stop flag leading to the termination of the simulation
         """
         self._exit = True
 
-    async def _notify_stop_simulation(self):
+    def _notify_stop_simulation(self):
         """
             Notify every agent that the simulation should stop.
             This is done through system messages.
@@ -145,58 +140,4 @@ class Environment(ExternalAgent):
 
         message = StopSimulation(self._name)
         to = list(self._agents.keys())
-        await self._network.send_system_message(message, to)
-
-    def _run_agent(self, agent):
-        self._agent_tasks.append(asyncio.create_task(agent.run()))
-
-    async def _wait_agent_tasks(self):
-        await asyncio.gather(*self._agent_tasks)
-
-    @staticmethod
-    async def _wait_message_tasks():
-        message_tasks = [task for task in asyncio.all_tasks(
-        ) if task.get_name() == "message_delivery"]
-        await asyncio.gather(*message_tasks)
-
-    async def run(self):
-
-        """
-            Run the main logic of the environment :
-
-            - bind OS signals
-            - Bootstrap agents peers
-            - Run main loop
-            - notify stop simulation
-            - cleanup agent tasks
-            - cleanup message tasks
-        """
-
-        self._running = True
-
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-
-        agents = list(self._agents.values())
-        random.shuffle(agents)
-
-        for agent in agents:
-            self._run_agent(agent)
-
-        await self._init_schedulables()
-        await self.fire_event(INIT)
-
-        while not self._exit and not SIGNAL_FLAG:
-
-            message = await self._get_next_message()
-            if message is not None:
-                await self._handle_message(message)
-
-            await self._run_schedulables()
-            await asyncio.sleep(0)
-
-        await self._notify_stop_simulation()
-        await self._wait_agent_tasks()
-        await self._wait_message_tasks()
-
-        self._running = False
+        self.send_system_message(message, to)

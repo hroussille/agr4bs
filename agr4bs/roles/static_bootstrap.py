@@ -22,7 +22,7 @@ from ..agents import AgentType, ContextChange
 from ..network.messages import BootStrapStaticPeers
 from ..events import REQUEST_BOOTSTRAP_STATIC_PEERS, INIT
 from .role import Role, RoleType
-from ..common import on
+from ..common import on, export
 
 
 class StaticBootstrapContextChange(ContextChange):
@@ -58,6 +58,7 @@ class StaticBootstrap(Role):
         return StaticBootstrapContextChange()
 
     @staticmethod
+    @export
     def get_candidate(agent: Environment, agent_name: str):
         """
             Pick the next best peer candidate for agent_name
@@ -100,8 +101,9 @@ class StaticBootstrap(Role):
         return None
 
     @staticmethod
+    @export
     @on(INIT)
-    async def init_bootstrap_peers(agent: Environment):
+    def init_bootstrap_peers(agent: Environment):
         """
             Precomputes the network topology with all inbound and outbound peers
         """
@@ -125,8 +127,9 @@ class StaticBootstrap(Role):
                 return
 
     @staticmethod
+    @export
     @on(REQUEST_BOOTSTRAP_STATIC_PEERS)
-    async def bootstrap_peers(agent: Environment, peer: str):
+    def bootstrap_peers(agent: Environment, peer: str):
         """
             Send a inbound peer request to all initial peer candidates
 
@@ -138,4 +141,5 @@ class StaticBootstrap(Role):
         outbounds = agent.context['outbound_table'][peer]
         inbounds = agent.context['inbound_table'][peer]
 
-        await agent.send_message(BootStrapStaticPeers(agent.name, inbounds, outbounds), peer, no_drop=True)
+        agent.send_message(BootStrapStaticPeers(
+            agent.name, inbounds, outbounds), peer, no_drop=True)

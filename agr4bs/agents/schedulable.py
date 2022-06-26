@@ -13,7 +13,6 @@ class Schedulable:
     def __init__(self, frequency, handler):
         self._frequency = frequency
         self._handler = handler
-        self._last_run_time = 0
 
     @property
     def handler(self):
@@ -23,18 +22,12 @@ class Schedulable:
         """
         return self._handler
 
-    def should_run(self, time) -> bool:
+    @property
+    def frequency(self):
         """
-            Get a boolean indicator on wether or not the Schedulable
-            should be run now or not.
+            Get the frequency as which the associated behavior should be ran
         """
-        return time - self._last_run_time >= self._frequency
-
-    def update(self, time):
-        """
-            Update the Schedulable last run time
-        """
-        self._last_run_time = time
+        return self._frequency
 
     def __eq__(self, __o: object) -> bool:
         return __o == self._handler

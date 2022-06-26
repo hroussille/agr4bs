@@ -21,13 +21,13 @@ async def test_block_creation():
     agents = []
 
     for i in range(10):
-        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
+        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.Factory)
         agent.add_role(agr4bs.roles.Peer())
         agent.add_role(agr4bs.roles.BlockchainMaintainer())
         agent.add_role(agr4bs.roles.BlockProposer())
         agents.append(agent)
 
-    env = agr4bs.Environment()
+    env = agr4bs.Environment(agr4bs.Factory)
     env.add_role(agr4bs.roles.Bootstrap())
     env.add_role(agr4bs.roles.BlockCreatorElector())
 
@@ -45,10 +45,15 @@ async def test_block_creation():
     await env.stop()
     await env_task
 
-    head_hashes = [agent.context['blockchain'].head.hash for agent in agents]
-    head_counts = Counter(head_hashes)
+    heads = [agent.context['blockchain'].head for agent in agents]
+    heads_heights = [head.height for head in heads]
+    heads_hashes = [head.hash for head in heads]
+    head_counts = Counter(heads_hashes)
 
     # Ensure that one head is shared by all agents
     # i.e., state is consensual
     for _, head_count in head_counts.items():
         assert head_count / len(agents) == 1
+
+    for head_height in heads_heights:
+        assert head_height > 1

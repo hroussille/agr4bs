@@ -19,9 +19,9 @@ The BlockProposer implementation which MUST contain the following behaviors :
 from ..agents import ExternalAgent, ContextChange, AgentType
 from ..events import CREATE_BLOCK
 from ..network.messages import DiffuseBlock
-from ..common import on
 from .role import Role, RoleType
 from ..blockchain import Block, Transaction
+from ..common import on, export
 
 
 class BlockProposerContextChange(ContextChange):
@@ -61,6 +61,7 @@ class BlockProposer(Role):
         return BlockProposerContextChange()
 
     @staticmethod
+    @export
     def select_transaction(agent: ExternalAgent, transactions: list[Transaction]) -> list[Transaction]:
         """ Select a subset of transactions for inclusion in a block
 
@@ -72,9 +73,9 @@ class BlockProposer(Role):
         return []
 
     @staticmethod
+    @export
     @on(CREATE_BLOCK)
-    async def can_create_block(agent: ExternalAgent):
-
+    def can_create_block(agent: ExternalAgent):
         """
             Behavior called on CREATE_BLOCK event. This is a system event triggered
             by the Environment.
@@ -82,9 +83,10 @@ class BlockProposer(Role):
             It is a one time authorization to create and propose a new Block to the network.
         """
 
-        await agent.propose_block(agent.create_block([]))
+        agent.propose_block(agent.create_block([]))
 
     @staticmethod
+    @export
     def create_block(agent: ExternalAgent, transactions: list[Transaction]) -> Block:
         """ Creates a block with the given transactions
 
@@ -97,11 +99,12 @@ class BlockProposer(Role):
         return Block(head_hash, agent.name, transactions)
 
     @staticmethod
-    async def propose_block(agent: ExternalAgent, block: Block):
+    @export
+    def propose_block(agent: ExternalAgent, block: Block):
         """ Propose a block to the network
 
             :param block: the block to propose to the network
             :type block: Block
         """
         outbound_peers = list(agent.context['outbound_peers'])
-        await agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)
+        agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)

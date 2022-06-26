@@ -14,13 +14,14 @@ The Peer implementation which MUST contain the following behaviors :
 
 """
 
+from math import exp
 import random
 
 from ..environment import Environment
 from ..agents import AgentType
 from ..network.messages import CreateBlock
 from .role import Role, RoleType
-from ..common import every, SECONDS
+from ..common import export, every
 
 
 class BlockCreatorElector(Role):
@@ -37,8 +38,9 @@ class BlockCreatorElector(Role):
         super().__init__(RoleType.BLOCK_CREATOR_ELECTOR, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
-    @every(0.1, SECONDS)
-    async def elect_block_creator(agent: Environment):
+    @export
+    @every(seconds=13)
+    def elect_block_creator(agent: Environment):
         """
             Notify a participant that it can create a block.
 
@@ -49,4 +51,4 @@ class BlockCreatorElector(Role):
         selected = agent.agents_names[0]
         #selected = random.sample(agent.agents_names, 2)
         #selected = random.sample(agent.agents_names, random.randint(1, 2))
-        await agent.send_system_message(CreateBlock(agent.name), selected)
+        agent.send_system_message(CreateBlock(agent.name), selected)

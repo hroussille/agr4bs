@@ -2,62 +2,15 @@
     Core and Custom messages types definitions
 """
 
-from enum import Enum
-
 from ..events import REQUEST_BOOTSTRAP_STATIC_PEERS, BOOTSTRAP_STATIC_PEERS
 from ..events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
 from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
 from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER, DROP_INBOUND_PEER
 from ..events import STOP_SIMULATION
 from ..events import CREATE_BLOCK, RECEIVE_BLOCK
+from ..events import RUN_SCHEDULABLE
 
 from ..blockchain import Block
-
-
-class MessageType(Enum):
-
-    """
-        Enumeration of the allowed message types
-    """
-
-    REQUEST_INBOUND_PEER = 1
-    ACCEPT_INBOUND_PEER = 2
-    DENY_INBOUND_PEER = 3
-    DROP_INBOUND_PEER = 4
-
-    REQUEST_OUTBOUND_PEER = 5
-    ACCEPT_OUTBOUND_PEER = 6
-    DENY_OUTBOUND_PEER = 7
-    DROP_OUTBOUND_PEER = 8
-
-    CREATE_BLOCK = 9
-    REQUEST_BLOCK = 10
-    PROPOSE_BLOCK = 11
-    DIFFUSE_BLOCK = 12
-
-    REQUEST_BLOCK_ENDORSEMENT = 13
-    ACCEPT_BLOCK_ENDORSEMENT = 14
-    DENY_BLOCK_ENDORSEMENT = 15
-
-    DIFFUSE_TRANSACTION = 16
-    REQUEST_TRANSACTION_ENDORSEMENT = 17
-    ACCEPT_TRANSACTION_ENDORSEMENT = 18
-    DENY_TRANSACTION_ENDORSEMENT = 19
-
-    PAUSE_SIMULATION = 20
-    RESTART_SIMULATION = 21
-    STOP_SIMULATION = 22
-
-    CUSTOM_MESSAGE = 23
-
-    REQUEST_BOOTSTRAP_PEERS = 24
-    BOOTSTRAP_PEERS = 25
-
-    REQUEST_BOOTSTRAP_STATIC_PEERS = 26
-    BOOTSTRAP_STATIC_PEERS = 27
-
-    REQUEST_PEER_DISCOVERY = 28
-    PEER_DISCOVERY = 29
 
 
 class Message:
@@ -68,11 +21,13 @@ class Message:
         a specific event on reception.
     """
 
-    def __init__(self, origin: str, _type: MessageType, event: str, *args):
+    def __init__(self, origin: str, event: str, *args):
         self._origin = origin
-        self._type = _type
         self._event = event
         self._data = args
+        self._date = None
+        self._nonce = 0
+        self._recipient = None
 
     @property
     def origin(self):
@@ -80,13 +35,6 @@ class Message:
             Get the origin of the message
         """
         return self._origin
-
-    @property
-    def type(self):
-        """
-            Get the type of the Message
-        """
-        return self._type
 
     @property
     def event(self):
@@ -102,6 +50,56 @@ class Message:
         """
         return self._data
 
+    @property
+    def date(self):
+        """
+            Get the date at which the message should be received
+        """
+        return self._date
+
+    @property
+    def nonce(self):
+        """
+            Get the nonce of the message
+        """
+        return self._nonce
+
+    @nonce.setter
+    def nonce(self, value: int):
+        self._nonce = value
+
+    @property
+    def recipient(self):
+        """
+            Get the recipient of the message
+        """
+        return self._recipient
+
+    @recipient.setter
+    def recipient(self, recipient):
+        self._recipient = recipient
+
+    @date.setter
+    def date(self, date):
+        self._date = date
+
+    def __lt__(self, other: 'Message'):
+        if self._date == other.date:
+            return self._nonce < other.nonce
+
+        return self._date < other.date
+
+
+class RunSchedulable(Message):
+    """
+        Message sent when a agent whishes to schedule the execution of one
+        of its behavior at a later point in time.
+    """
+
+    def __init__(self, origin: str, schedulable: str):
+        _event = RUN_SCHEDULABLE
+        super().__init__(origin, _event, schedulable)
+
 
 class RequestBootstrapPeers(Message):
 
@@ -111,9 +109,8 @@ class RequestBootstrapPeers(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.REQUEST_BOOTSTRAP_PEERS
         _event = REQUEST_BOOTSTRAP_PEERS
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class RequestBootstrapStaticPeers(Message):
@@ -124,9 +121,8 @@ class RequestBootstrapStaticPeers(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.REQUEST_BOOTSTRAP_STATIC_PEERS
         _event = REQUEST_BOOTSTRAP_STATIC_PEERS
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class BootStrapPeers(Message):
@@ -136,9 +132,8 @@ class BootStrapPeers(Message):
     """
 
     def __init__(self, origin: str, bootstrap_list: list[str]):
-        _type = MessageType.BOOTSTRAP_PEERS
         _event = BOOTSTRAP_PEERS
-        super().__init__(origin, _type, _event, bootstrap_list)
+        super().__init__(origin, _event, bootstrap_list)
 
 
 class BootStrapStaticPeers(Message):
@@ -148,9 +143,8 @@ class BootStrapStaticPeers(Message):
     """
 
     def __init__(self, origin: str, inbound_bootsrap_list: list[str], outbound_bootstrap_list: list[str]):
-        _type = MessageType.BOOTSTRAP_STATIC_PEERS
         _event = BOOTSTRAP_STATIC_PEERS
-        super().__init__(origin, _type, _event, inbound_bootsrap_list, outbound_bootstrap_list)
+        super().__init__(origin, _event, inbound_bootsrap_list, outbound_bootstrap_list)
 
 
 class RequestPeerDiscovery(Message):
@@ -160,9 +154,8 @@ class RequestPeerDiscovery(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.REQUEST_PEER_DISCOVERY
         _event = REQUEST_PEER_DISCOVERY
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class PeerDiscovery(Message):
@@ -172,9 +165,8 @@ class PeerDiscovery(Message):
     """
 
     def __init__(self, origin: str, peers: list[str]):
-        _type = MessageType.PEER_DISCOVERY
         _event = PEER_DISCOVERY
-        super().__init__(origin, _type, _event, peers)
+        super().__init__(origin, _event, peers)
 
 
 class RequestInboundPeer(Message):
@@ -187,9 +179,8 @@ class RequestInboundPeer(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.REQUEST_INBOUND_PEER
         _event = REQUEST_INBOUND_PEER
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class AcceptInboundPeer(Message):
@@ -200,9 +191,8 @@ class AcceptInboundPeer(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.ACCEPT_INBOUND_PEER
         _event = ACCEPT_INBOUND_PEER
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class DenyInboundPeer(Message):
@@ -213,9 +203,8 @@ class DenyInboundPeer(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.DENY_INBOUND_PEER
         _event = DENY_INBOUND_PEER
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class DropInboundPeer(Message):
@@ -227,9 +216,8 @@ class DropInboundPeer(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.DROP_INBOUND_PEER
         _event = DROP_INBOUND_PEER
-        super().__init__(origin, _type, _event, origin)
+        super().__init__(origin, _event, origin)
 
 
 class StopSimulation(Message):
@@ -240,9 +228,8 @@ class StopSimulation(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.STOP_SIMULATION
         _event = STOP_SIMULATION
-        super().__init__(origin, _type, _event)
+        super().__init__(origin, _event)
 
 
 class CreateBlock(Message):
@@ -253,9 +240,8 @@ class CreateBlock(Message):
     """
 
     def __init__(self, origin: str):
-        _type = MessageType.CREATE_BLOCK
         _event = CREATE_BLOCK
-        super().__init__(origin, _type, _event)
+        super().__init__(origin, _event)
 
 
 class ProposeBlock(Message):
@@ -265,9 +251,8 @@ class ProposeBlock(Message):
     """
 
     def __init__(self, origin: str, block: Block):
-        _type = MessageType.PROPOSE_BLOCK
         _event = RECEIVE_BLOCK
-        super().__init__(origin, _type, _event, Block.from_serialized(block.serialize()))
+        super().__init__(origin, _event, Block.from_serialized(block.serialize()))
 
 
 class DiffuseBlock(Message):
@@ -277,6 +262,5 @@ class DiffuseBlock(Message):
     """
 
     def __init__(self, origin: str, block: Block):
-        _type = MessageType.PROPOSE_BLOCK
         _event = RECEIVE_BLOCK
-        super().__init__(origin, _type, _event, Block.from_serialized(block.serialize()))
+        super().__init__(origin, _event, Block.from_serialized(block.serialize()))

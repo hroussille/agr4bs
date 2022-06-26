@@ -2,13 +2,14 @@
     Test suite for the Environment class related to agents addition
 """
 
+from datetime import datetime
 import random
 import asyncio
 import agr4bs
 from agr4bs.agents.external_agent import ExternalAgent
 
 
-async def test_block_creation():
+def test_block_creation():
     """
         Test that the environment can be run and stopped later
         with no error or unwaited tasks
@@ -20,23 +21,23 @@ async def test_block_creation():
 
     agents: ExternalAgent = []
 
-    for i in range(50):
-        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
+    for i in range(10):
+        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.Factory)
         agent.add_role(agr4bs.roles.StaticPeer())
         agents.append(agent)
 
-    env = agr4bs.Environment()
+    env = agr4bs.Environment(agr4bs.Factory)
     env.add_role(agr4bs.roles.StaticBootstrap())
 
     for agent in agents:
         env.add_agent(agent)
 
-    env_task = asyncio.create_task(env.run())
+    scheduler = agr4bs.Scheduler(env, agr4bs.Factory)
 
-    await asyncio.sleep(1)
+    def condition(environment: agr4bs.Environment):
+        return True
 
-    await env.stop()
-    await env_task
+    scheduler.run(condition)
 
     for agent in agents:
         # Ensure that each agent can send to max_outbound_peers other agents

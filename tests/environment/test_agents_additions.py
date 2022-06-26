@@ -12,8 +12,10 @@ def test_agent_addition():
     """
 
     agr4bs.Factory.build_network(reset=True)
-    agent = agr4bs.ExternalAgent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    env = agr4bs.Environment()
+    genesis = agr4bs.Block(
+        parent_hash=None, creator='genesis', transactions=[])
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent)
 
@@ -30,8 +32,10 @@ def test_agent_double_addition():
     """
 
     agr4bs.Factory.build_network(reset=True)
-    agent = agr4bs.ExternalAgent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    env = agr4bs.Environment()
+    genesis = agr4bs.Block(
+        parent_hash=None, creator='genesis', transactions=[])
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent)
 
@@ -48,10 +52,12 @@ def test_agent_double_addition_name_conflict():
         added to the state
     """
     agr4bs.Factory.build_network(reset=True)
-    agent0 = agr4bs.ExternalAgent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent1 = agr4bs.ExternalAgent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
+    genesis = agr4bs.Block(
+        parent_hash=None, creator='genesis', transactions=[])
+    agent0 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    agent1 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
 
-    env = agr4bs.Environment()
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent0)
 

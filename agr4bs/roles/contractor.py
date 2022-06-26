@@ -14,6 +14,7 @@ The Contractor implementation has no mandatory exports
 
 from ..agents import ContextChange, AgentType
 from .role import Role, RoleType
+from ..common import export
 
 
 class ContractorContextChange(ContextChange):

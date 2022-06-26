@@ -14,7 +14,8 @@ The Peer implementation which MUST contain the following behaviors :
 
 """
 
-from ..common import on
+from ordered_set import OrderedSet
+from ..common import on, export
 from ..network.messages import RequestBootstrapStaticPeers
 from ..events import INIT, BOOTSTRAP_STATIC_PEERS
 from ..agents import ExternalAgent, ContextChange, AgentType
@@ -32,8 +33,8 @@ class StaticPeerContextChange(ContextChange):
     def __init__(self) -> None:
         super().__init__()
 
-        self.inbound_peers = set()
-        self.outbound_peers = set()
+        self.inbound_peers = OrderedSet()
+        self.outbound_peers = OrderedSet()
 
 
 class StaticPeer(Role):
@@ -57,16 +58,19 @@ class StaticPeer(Role):
         return StaticPeerContextChange()
 
     @staticmethod
+    @export
     @on(INIT)
-    async def send_request_bootstrap_static_peers(agent: ExternalAgent):
+    def send_request_bootstrap_static_peers(agent: ExternalAgent):
         """
             Send a request for bootstrap static peers to the environment on startup.
         """
-        await agent.send_message(RequestBootstrapStaticPeers(agent.name), "environment", no_drop=True)
+        agent.send_message(
+            RequestBootstrapStaticPeers(agent.name), "environment", no_drop=True)
 
     @staticmethod
+    @export
     @on(BOOTSTRAP_STATIC_PEERS)
-    async def bootstrap_static_peers(agent: ExternalAgent, inbounds: list[str], outbounds: list[str]):
+    def bootstrap_static_peers(agent: ExternalAgent, inbounds: list[str], outbounds: list[str]):
         """
             Register the static peers as given.
 

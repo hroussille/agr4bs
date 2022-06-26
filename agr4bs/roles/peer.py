@@ -17,9 +17,6 @@ The Peer implementation which MUST contain the following behaviors :
 import random
 import asyncio
 
-from agr4bs.common.decorators import SECONDS
-
-
 from ..network.messages import AcceptInboundPeer, DenyInboundPeer, DropInboundPeer, PeerDiscovery, RequestInboundPeer, RequestBootstrapPeers, RequestPeerDiscovery
 from ..events import INIT, CLEANUP, DROP_INBOUND_PEER, DROP_OUTBOUND_PEER
 from ..events import BOOTSTRAP_PEERS, REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
@@ -28,7 +25,7 @@ from ..events import ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER
 from ..events import SEND_MESSAGE, RECEIVE_MESSAGE
 from ..agents import ExternalAgent, ContextChange, AgentType
 from .role import Role, RoleType
-from ..common import on, every, SECONDS
+from ..common import export, on, every
 
 
 class PeerContextChange(ContextChange):
@@ -70,6 +67,7 @@ class Peer(Role):
         return PeerContextChange()
 
     @staticmethod
+    @export
     @on(INIT)
     async def send_request_bootstrap_peers(agent: ExternalAgent):
         """
@@ -78,6 +76,7 @@ class Peer(Role):
         await agent.send_message(RequestBootstrapPeers(agent.name), "environment", no_drop=True)
 
     @staticmethod
+    @export
     @on(BOOTSTRAP_PEERS)
     async def bootstrap_peers(agent: ExternalAgent, candidates: list[str]):
         """
@@ -93,6 +92,7 @@ class Peer(Role):
             await agent.send_request_inbound_peer(candidate)
 
     @staticmethod
+    @export
     @on(RECEIVE_MESSAGE)
     async def register_inbound_peer_activity(agent: ExternalAgent, peer: str):
         """
@@ -119,6 +119,7 @@ class Peer(Role):
                 callback(agent, peer))
 
     @staticmethod
+    @export
     @on(SEND_MESSAGE)
     async def register_outbound_peer_activity(agent: ExternalAgent, peers: list[str]):
         """
@@ -147,6 +148,7 @@ class Peer(Role):
                     callback(agent, peer))
 
     @staticmethod
+    @export
     @on(CLEANUP)
     async def cleanup_inactive_peer_tasks(agent: ExternalAgent):
         """
@@ -169,7 +171,8 @@ class Peer(Role):
         await asyncio.gather(*all_tasks, return_exceptions=True)
 
     @staticmethod
-    @every(0.25, SECONDS)
+    @export
+    @every(miliseconds=250)
     async def find_outbound_peer(agent: ExternalAgent):
         """
             Periodically look for new outbound peers if we have some connections to spare.
@@ -199,7 +202,8 @@ class Peer(Role):
         await agent.send_request_inbound_peer(candidate)
 
     @staticmethod
-    @every(1, SECONDS)
+    @export
+    @every(seconds=1)
     async def trigger_peer_discovery(agent: ExternalAgent):
         """
             Periodically send peer discovery requests to known peers that are not already
@@ -227,6 +231,7 @@ class Peer(Role):
                 await agent.send_request_peer_discovery(selected)
 
     @staticmethod
+    @export
     async def send_request_peer_discovery(agent: ExternalAgent, peer: str):
         """ Send a peer discovery request to a specific peer
 
@@ -238,6 +243,7 @@ class Peer(Role):
         await agent.send_message(RequestPeerDiscovery(agent.name), peer)
 
     @staticmethod
+    @export
     @on(REQUEST_PEER_DISCOVERY)
     async def receive_request_peer_discovery(agent: ExternalAgent, peer: str):
         """
@@ -246,6 +252,7 @@ class Peer(Role):
         await agent.send_message(PeerDiscovery(agent.name, agent.context['peer_registry']), peer)
 
     @staticmethod
+    @export
     @on(PEER_DISCOVERY)
     async def receive_peer_discovery(agent: ExternalAgent, new_peers: list[str]):
 
@@ -262,6 +269,7 @@ class Peer(Role):
                 agent.context['peer_registry'].add(peer)
 
     @staticmethod
+    @export
     async def send_request_inbound_peer(agent: ExternalAgent, peer: str):
         """ Send a peer request to a specific peer
 
@@ -274,6 +282,7 @@ class Peer(Role):
         await agent.send_message(RequestInboundPeer(agent.name), peer)
 
     @staticmethod
+    @export
     @on(REQUEST_INBOUND_PEER)
     async def receive_request_inbound_peer(agent: ExternalAgent, peer: str):
         """ Send a peer request to a specific peer
@@ -294,6 +303,7 @@ class Peer(Role):
             await agent.send_message(AcceptInboundPeer(agent.name), peer)
 
     @staticmethod
+    @export
     @on(ACCEPT_INBOUND_PEER)
     async def accept_inbound_peer(agent: ExternalAgent, peer: str):
         """ Send a peer request to a specific peer
@@ -308,6 +318,7 @@ class Peer(Role):
             agent.context['outbound_peers'].add(peer)
 
     @staticmethod
+    @export
     @on(DENY_INBOUND_PEER)
     async def deny_inbound_peer(agent: ExternalAgent, peer: str):
         """ Send a peer request to a specific peer
@@ -322,6 +333,7 @@ class Peer(Role):
             agent.context['inbound_peers'].remove(peer)
 
     @staticmethod
+    @export
     async def notify_drop_inbound_peer(agent: ExternalAgent, peer: str):
         """ Send a peer request to a specific peer
 
@@ -336,6 +348,7 @@ class Peer(Role):
         await agent.send_message(DropInboundPeer(agent.name), peer)
 
     @staticmethod
+    @export
     @on(DROP_INBOUND_PEER)
     async def receive_drop_inbound_peer(agent: ExternalAgent, peer: str):
         """
@@ -344,7 +357,8 @@ class Peer(Role):
         if peer in agent.context['outbound_peers']:
             agent.context['outbound_peers'].remove(peer)
 
-    @ staticmethod
+    @staticmethod
+    @export
     async def notify_drop_outbound_peer(agent: ExternalAgent, peer: str):
         """ Send a peer request to a specific peer
 
@@ -356,8 +370,9 @@ class Peer(Role):
         if peer in agent.context['outbound_peers']:
             agent.context['outbound_peers'].remove(peer)
 
-    @ staticmethod
-    @ on(DROP_OUTBOUND_PEER)
+    @staticmethod
+    @export
+    @on(DROP_OUTBOUND_PEER)
     async def receive_drop_outbound_peer(agent: ExternalAgent, peer: str):
         """
             Handles a DROP_OUTBOUND_PEER event.

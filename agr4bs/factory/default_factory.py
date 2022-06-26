@@ -2,7 +2,7 @@
     Agr4bsFactory file class implementation
 """
 
-from ..network import AioNetwork
+from ..network import Network
 from ..blockchain import Blockchain, Block, Transaction, Payload
 from ..vm import VM
 from ..state import State
@@ -66,11 +66,11 @@ class Factory:
         return State()
 
     @staticmethod
-    def build_network(reset=False) -> AioNetwork:
+    def build_network(reset=False) -> Network:
         """
             Builds a black box Network implementation
         """
         if Factory.__network is None or reset is True:
-            Factory.__network = AioNetwork(delay=0.060, drop_rate=0.01)
+            Factory.__network = Network(delay=60, drop_rate=0.01)
 
         return Factory.__network

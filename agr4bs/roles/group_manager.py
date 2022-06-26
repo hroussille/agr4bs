@@ -14,6 +14,7 @@ The GroupManager implementation which MUST contain the following behaviors :
 
 from ..agents import Agent, ContextChange, AgentType
 from .role import Role, RoleType
+from ..common import export
 
 
 class GroupManagerContextChange(ContextChange):
@@ -50,6 +51,7 @@ class GroupManager(Role):
         return GroupManagerContextChange()
 
     @staticmethod
+    @export
     def authorize(agent: Agent, candidate: Agent, *args, **kwargs) -> bool:
         """ authorizes an agent to enter the group or not
 

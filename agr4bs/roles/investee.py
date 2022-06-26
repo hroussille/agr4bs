@@ -15,7 +15,7 @@ The Investee implementation which MUST contain the following behaviors :
 """
 
 from .role import Role, RoleType
-from ..common import Investment
+from ..common import Investment, export
 from ..agents import Agent, ContextChange, AgentType
 
 
@@ -55,6 +55,7 @@ class Investee(Role):
         return InvesteeContextChange()
 
     @staticmethod
+    @export
     def receive_investment(agent: Agent, investment: Investment, *args, **kwargs):
         """ Receive an investment from an Investor
 
@@ -66,6 +67,7 @@ class Investee(Role):
         raise NotImplementedError
 
     @staticmethod
+    @export
     def redistribute(agent: Agent, investor: Agent, *args, **kwargs) -> bool:
         """ Redistribute earnings to a specific investor as investment
 
@@ -79,6 +81,7 @@ class Investee(Role):
         raise NotImplementedError
 
     @staticmethod
+    @export
     def redistribute_full(agent: Agent, investor: Agent, *args, **kwargs) -> bool:
         """ Redistribute earnings AND investment(s) to a specific investor
 

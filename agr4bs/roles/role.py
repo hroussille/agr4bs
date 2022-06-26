@@ -6,6 +6,8 @@
 from enum import Enum
 from ..common import IterableEnumMeta
 from ..agents import ContextChange, AgentType
+import inspect
+import itertools
 
 
 class BindBlackList(Enum, metaclass=IterableEnumMeta):
@@ -90,6 +92,7 @@ class Role:
 
             :returns: the dictionary of
         """
+
     @property
     def behaviors(self) -> dict:
         """ Get the behaviors exposed by the Role
@@ -97,7 +100,17 @@ class Role:
             :returns: the dictionary of behaviors with the format {behavior_name: behavior_implementation}
             :rtype: dict
         """
-        return {behavior: getattr(self, behavior) for behavior, implementation in self.__class__.__dict__.items() if behavior not in BindBlackList and isinstance(implementation, staticmethod)}
+
+        members = inspect.getmembers(
+            self.__class__, predicate=inspect.isfunction)
+        behaviors = {}
+
+        for member in members:
+            name, implementation = member
+            if hasattr(implementation, 'export'):
+                behaviors[name] = implementation
+
+        return behaviors
 
     @property
     def type(self) -> RoleType:
@@ -108,7 +121,7 @@ class Role:
         """
         return self._type
 
-    @property
+    @ property
     def agent_type(self) -> AgentType:
         """ Get the AgentType the Role is able to be mounted to
 

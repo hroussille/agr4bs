@@ -21,7 +21,7 @@ from ..agents import AgentType
 from ..network.messages import BootStrapPeers
 from ..events import REQUEST_BOOTSTRAP_PEERS
 from .role import Role, RoleType
-from ..common import on
+from ..common import on, export
 
 
 class Bootstrap(Role):
@@ -38,6 +38,7 @@ class Bootstrap(Role):
         super().__init__(RoleType.BOOTSTRAP, AgentType.EXTERNAL_AGENT)
 
     @staticmethod
+    @export
     @on(REQUEST_BOOTSTRAP_PEERS)
     async def bootstrap_peers(agent: Environment, peer: str):
         """

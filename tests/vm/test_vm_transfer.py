@@ -32,7 +32,7 @@ def test_transfer_with_existing_accounts():
     assert state.get_account_balance("account_1") == 0
     assert state.get_account_nonce("account_1") == 0
 
-    tx = agr4bs.Transaction("account_0", "account_1", 0, amount=100)
+    tx = agr4bs.Transaction("account_0", "account_1", 0, value=100)
     vm = agr4bs.VM()
 
     receipt = vm.process_tx(state.copy(), tx)
@@ -69,7 +69,7 @@ def test_transfer_with_non_existing_account():
 
     assert state.has_account("account_1") is False
 
-    tx = agr4bs.Transaction("account_0", "account_1", 0, amount=100)
+    tx = agr4bs.Transaction("account_0", "account_1", 0, value=100)
     vm = agr4bs.VM()
 
     receipt = vm.process_tx(state.copy(), tx)

@@ -4,6 +4,7 @@
 """
 
 import inspect
+import datetime
 
 # pylint: disable=too-few-public-methods
 # pylint: disable=invalid-name
@@ -35,14 +36,6 @@ class on:
         return function
 
 
-MILISECONDS = 1 / 1000
-SECONDS = 1
-MINUTES = 60
-
-# pylint: disable=too-few-public-methods
-# pylint: disable=invalid-name
-
-
 class every:
 
     """
@@ -51,15 +44,10 @@ class every:
         the execution of the decorated function to the given events.
     """
 
-    def __init__(self, frequency: int, unit: int):
+    def __init__(self, days=0, hours=0, minutes=0, seconds=0, miliseconds=0, microseconds=0):
 
-        if frequency <= 0:
-            raise ValueError("Frequency must be greater than 0")
-
-        if unit not in [MILISECONDS, SECONDS, MINUTES]:
-            raise ValueError("Uknown frequency parameter")
-
-        self._frequency = frequency * unit
+        self._frequency = datetime.timedelta(
+            days=days, hours=hours, minutes=minutes, seconds=seconds, milliseconds=miliseconds, microseconds=microseconds)
 
     def __call__(self, function):
 
@@ -76,3 +64,24 @@ class every:
         function.frequency = self._frequency
 
         return function
+
+
+def payable(function):
+    """
+       The payable decorator adds the payable property to an InternalAgent function
+       allowing it to be called with a non zero value
+    """
+    function.payable = True
+
+    return function
+
+
+def export(function):
+    """
+        The export decorator marks a role behavior for exportation. An agent taking the role
+        will also take on that behavior.
+    """
+
+    function.export = True
+
+    return function

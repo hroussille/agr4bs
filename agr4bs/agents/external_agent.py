@@ -1,17 +1,19 @@
 """
     ExternalAgent file class implementation
 """
-
-import asyncio
+import copy
+import datetime
 
 from collections import defaultdict
 from typing import Union
+from agr4bs.events.events import RUN_SCHEDULABLE
+
+from agr4bs.network.messages import RunSchedulable
 
 from ..events import INIT, STOP_SIMULATION, RECEIVE_MESSAGE, SEND_MESSAGE, CLEANUP
-from ..network import Message, MessageType
+from ..network import Message
 from .agent import Agent, AgentType
 from ..blockchain import Block
-from ..factory import Factory
 from .schedulable import Schedulable
 
 
@@ -24,57 +26,62 @@ class ExternalAgent(Agent):
         It may contribute to the system or simply interact with it autonomously.
     """
 
-    def __init__(self, name: str, genesis: Block, factory: Factory = None):
+    def __init__(self, name: str, genesis: Block, factory: 'Factory'):
 
         super().__init__(name, AgentType.EXTERNAL_AGENT)
-
-        if factory is None:
-            factory = Factory()
 
         self.safe_inject('genesis', genesis)
         self.safe_inject('factory', factory)
 
         self.drop_time = 2
-        self.max_inbound_peers = 20
+        self.max_inbound_peers = 15
         self.max_outbound_peers = 5
 
         self._network = factory.build_network()
-        self._message_queue = asyncio.Queue()
         self._event_handlers = defaultdict(list)
         self._schedulables = {}
         self._exit = False
+        self._date = None
 
         self._add_event_handler(STOP_SIMULATION, self.stop_simulation_handler)
+        self._add_event_handler(RUN_SCHEDULABLE, self.run_schedulable_handler)
 
     @property
-    def message_queue(self):
+    def date(self):
         """
-            Get the agent dedicated message queue
+            Get the current date from the agent point of vue
         """
-        return self._message_queue
+        return self._date
+
+    @date.setter
+    def date(self, new_date):
+        """
+            Update the current date for the agent
+        """
+        self._date = new_date
 
     def add_role(self, role: 'Role') -> bool:
         super().add_role(role)
 
-        for _, implementation in role.behaviors.items():
+        for behavior_name, implementation in role.behaviors.items():
 
             if hasattr(implementation, 'on'):
                 self._add_event_handler(implementation.on, implementation)
 
             elif hasattr(implementation, 'frequency'):
                 frequency = implementation.frequency
-                self._add_schedulable(frequency, implementation)
+                self._add_schedulable(behavior_name, frequency, implementation)
 
     def remove_role(self, role: 'Role') -> bool:
         super().remove_role(role)
 
-        for _, implementation in role.behaviors.items():
+        for behavior_name, implementation in role.behaviors.items():
 
             if hasattr(implementation, 'on'):
                 self._remove_event_handler(implementation.on, implementation)
 
             elif hasattr(implementation, 'frequency'):
-                self._remove_schedulable(implementation)
+                self._remove_schedulable(behavior_name)
 
     def _add_event_handler(self, event, handler):
 
@@ -84,101 +91,98 @@ class ExternalAgent(Agent):
     def _remove_event_handler(self, event, handler):
         self._event_handlers[event].remove(handler)
 
-    def _add_schedulable(self, frequency: int, handler: callable):
-        self._schedulables[handler] = Schedulable(frequency, handler)
+    def _add_schedulable(self, name: str, frequency: int, handler: callable):
+        self._schedulables[name] = Schedulable(frequency, handler)
 
-    def _remove_schedulable(self, handler):
-        del self._schedulables[handler]
+    def _remove_schedulable(self, name):
+        if name in self._schedulables:
+            del self._schedulables[name]
 
-    async def stop_simulation_handler(self):
+    @staticmethod
+    def stop_simulation_handler(agent: 'ExternalAgent'):
         """
             Core event handler : STOP_SIMULATION
             Sets the agent exit_flag leading to its termination.
         """
-        self._exit = True
+        agent._exit = True
 
-    async def fire_event(self, event, *args, **kwargs):
+    @staticmethod
+    def run_schedulable_handler(agent: 'ExternalAgent', behavior_name: str):
+        """
+            Core event handler : RUN_SCHEDULABLE
+            Run a scheduled behavior
+        """
+
+        if behavior_name in agent._schedulables:
+            schedulable = agent._schedulables[behavior_name]
+            schedulable.handler(agent)
+            agent._schedule_behavior(behavior_name, schedulable.frequency)
+
+    def fire_event(self, event, *args, **kwargs):
         """
             Fire a specific event and wait for the handler(s) to finish
         """
         if event in self._event_handlers:
             for event_handler in self._event_handlers[event]:
-                await event_handler(self, *args, **kwargs)
+                event_handler(self, *args, **kwargs)
 
-    async def send_message(self, message: Message, to: Union[str, list[str]], no_drop=False):
+    def send_message(self, message: Message, to: Union[str, list[str]], no_drop=False):
         """
             Send a Message to one or many agents
         """
         if not isinstance(to, list):
             to = [to]
 
-        await self._network.send_message(message, to, no_drop)
-        await self.fire_event(SEND_MESSAGE, to)
+        for recipient in to:
+            _message = copy.copy(message)
+            _message.recipient = recipient
+            _message.date = self._date
+            self._network.send_message(_message, no_drop=no_drop)
 
-    async def send_system_message(self, message: Message, to: Union[str, list[str]]):
+        self.fire_event(SEND_MESSAGE, to)
+
+    def send_system_message(self, message: Message, to: Union[str, list[str]], delay=None):
         """
             Send a Message to one or many agents
         """
         if not isinstance(to, list):
             to = [to]
 
-        await self._network.send_message(message, to)
-        await self.fire_event(SEND_MESSAGE, to)
+        for recipient in to:
+            _message = copy.copy(message)
+            _message.recipient = recipient
+            _message.date = self._date
 
-    async def _get_next_message(self):
+            if delay is not None:
+                _message.date = _message.date + delay
+
+            self._network.send_system_message(_message)
+
+    def handle_message(self, message: Message):
         """
-            Get the next Message from the message queue
+            Handle a given message by firing the associated events
         """
-        try:
-            message = self._message_queue.get_nowait()
-            await self.fire_event(RECEIVE_MESSAGE, message.origin)
-        except asyncio.QueueEmpty:
-            message = None
+        self.fire_event(RECEIVE_MESSAGE, message.origin)
+        self.fire_event(message.event, *message.data)
 
-        return message
+    def _schedule_behavior(self, behavior_name: str, frequency: datetime.timedelta):
+        message = RunSchedulable(self.name, behavior_name)
+        self.send_system_message(message, self.name, delay=frequency)
 
-    async def _handle_message(self, message: Message):
+    def _init_schedulables(self):
+        for behavior_name, schedulable in self._schedulables.items():
+            self._schedule_behavior(behavior_name, schedulable.frequency)
+
+    def init(self, date):
         """
-            handle messages and fire the event the message is bound to
+            Initializes the agent
         """
-        if message.type == MessageType.STOP_SIMULATION:
-            self._exit = True
+        self._date = date
+        self._init_schedulables()
+        self.fire_event(INIT)
 
-        else:
-            await self.fire_event(message.event, *message.data)
-
-    async def _run_schedulables(self):
-        time = asyncio.get_event_loop().time()
-
-        for schedulable in self._schedulables.values():
-            if schedulable.should_run(time):
-                await schedulable.handler(self)
-                schedulable.update(time)
-
-    async def _init_schedulables(self):
-        time = asyncio.get_event_loop().time()
-
-        for schedulable in self._schedulables.values():
-            schedulable.update(time)
-
-    async def run(self):
+    def cleanup(self):
         """
-            Run the agent :
-            - handle messages
-            - handle schedules events
+            Cleanup the agent
         """
-
-        await self._init_schedulables()
-        await self.fire_event(INIT)
-
-        while not self._exit:
-
-            message = await self._get_next_message()
-
-            if message is not None:
-                await self._handle_message(message)
-
-            await self._run_schedulables()
-            await asyncio.sleep(0)
-
-        await self.fire_event(CLEANUP)
+        self.fire_event(CLEANUP)

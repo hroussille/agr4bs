@@ -17,3 +17,4 @@ class Receipt(NamedTuple):
     tx_hash: str
     state_changes: list[StateChange]
     reverted: bool
+    revert_reason: str

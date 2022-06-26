@@ -17,11 +17,11 @@ async def test_run():
     agents = []
 
     for i in range(50):
-        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis)
+        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.Factory)
         agent.add_role(agr4bs.roles.Peer())
         agents.append(agent)
 
-    env = agr4bs.Environment()
+    env = agr4bs.Environment(agr4bs.Factory)
     env.add_role(agr4bs.roles.Bootstrap())
 
     for agent in agents:

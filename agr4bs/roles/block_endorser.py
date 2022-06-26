@@ -15,6 +15,7 @@ The BlockEndorser implementation which MUST contain the following behaviors :
 from ..agents import Agent, ContextChange, AgentType
 from .role import Role, RoleType
 from ..blockchain import Block
+from ..common import export
 
 
 class BlockEndorserContextChange(ContextChange):
@@ -55,6 +56,7 @@ class BlockEndorser(Role):
         return BlockEndorserContextChange()
 
     @staticmethod
+    @export
     def endorse_block(agent: Agent, block: Block, *args, **kwargs) -> bool:
         """ Endorse a specific block
 

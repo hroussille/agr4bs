@@ -2,7 +2,7 @@
     Main agr4bs module
 """
 
-from .agents import Agent, AgentType, ExternalAgent, InternalAgent
+from .agents import Agent, AgentType, ExternalAgent, InternalAgent, InternalAgentCalldata, InternalAgentResponse
 from .groups import Group, GroupType
 from .roles import Role, RoleType
 from .blockchain.block import Block
@@ -17,6 +17,7 @@ from .state import Receipt
 from .vm import VM
 from .environment.environment import Environment
 from .factory import Factory
+from .scheduler import Scheduler
 
 from . import groups
 from . import roles

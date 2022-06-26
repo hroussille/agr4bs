@@ -45,7 +45,7 @@ def test_blockchain_maintainer_addition():
     - Agent has all the BlockchainMaintainer context changes
     """
     genesis = agr4bs.Block(None, None, [])
-    agent = agr4bs.ExternalAgent("agent_0", genesis)
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.BlockchainMaintainer()
 
     agent.add_role(agr4bs.roles.Peer())
@@ -70,7 +70,7 @@ def test_blockchain_maintainer_removal():
     - Agent has none of the BlockchainMaintainer context changes
     """
     genesis = agr4bs.Block(None, None, [])
-    agent = agr4bs.ExternalAgent("agent_0", genesis)
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.BlockchainMaintainer()
 
     agent.add_role(agr4bs.roles.Peer())
