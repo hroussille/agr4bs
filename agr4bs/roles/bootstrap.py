@@ -40,7 +40,7 @@ class Bootstrap(Role):
     @staticmethod
     @export
     @on(REQUEST_BOOTSTRAP_PEERS)
-    async def bootstrap_peers(agent: Environment, peer: str):
+    def bootstrap_peers(agent: Environment, peer: str):
         """
             Send a inbound peer request to all initial peer candidates
 
@@ -53,4 +53,4 @@ class Bootstrap(Role):
         n = min(len(candidates), 10)
         selected = random.sample(candidates, n)
 
-        await agent.send_message(BootStrapPeers(agent.name, selected), peer, no_drop=True)
+        agent.send_message(BootStrapPeers(agent.name, selected), peer, no_drop=True)

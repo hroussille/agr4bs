@@ -2,9 +2,8 @@
     Test suite for the Environment class related to agents addition
 """
 
-from datetime import datetime
+import datetime
 import random
-import asyncio
 import agr4bs
 from agr4bs.agents.external_agent import ExternalAgent
 
@@ -32,10 +31,12 @@ def test_block_creation():
     for agent in agents:
         env.add_agent(agent)
 
-    scheduler = agr4bs.Scheduler(env, agr4bs.Factory)
+    epoch = datetime.datetime.utcfromtimestamp(0)
+
+    scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
 
     def condition(environment: agr4bs.Environment):
-        return True
+        return environment.date < epoch + datetime.timedelta(minutes=5)
 
     scheduler.run(condition)
 
@@ -45,3 +46,4 @@ def test_block_creation():
 
         # Ensute that each agent can receive from at least max_outbound_peers other agents
         assert len(agent.context['inbound_peers']) >= agent.max_outbound_peers
+

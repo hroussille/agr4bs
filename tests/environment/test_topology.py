@@ -2,8 +2,8 @@
     Test suite for the Environment class related to agents addition
 """
 
+import datetime
 import random
-import asyncio
 import agr4bs
 from agr4bs.agents.external_agent import ExternalAgent
 
@@ -31,19 +31,23 @@ async def test_block_creation():
     for agent in agents:
         env.add_agent(agent)
 
-    env_task = asyncio.create_task(env.run())
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    
+    scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
 
-    await asyncio.sleep(1)
+    def condition(environment: agr4bs.Environment) -> bool:
+        return environment.date < epoch + datetime.timedelta(days=1)
 
-    await env.stop()
-    await env_task
+    def progress(environment: agr4bs.Environment) -> bool:
+        delta: datetime.timedelta = environment.date - epoch
+        return min(1, delta.total_seconds() / datetime.timedelta(days=1).total_seconds())
+
+    scheduler.run(condition, progress=progress)
 
     for agent in agents:
+        # Ensure that each agent can send to max_outbound_peers other agents
+        assert len(agent.context['outbound_peers']) == agent.max_outbound_peers
 
-        # Ensure that each agent can send to at least one other agent
-        assert len(agent.context['outbound_peers']) > 0 and len(
-            agent.context['outbound_peers']) <= agent.max_outbound_peers
+        # Ensute that each agent can receive from at least max_outbound_peers other agents
+        assert len(agent.context['inbound_peers']) >= agent.max_outbound_peers
 
-        # Ensute that each agent can receive from at least one other agent
-        assert len(agent.context['inbound_peers']) >= 0 and len(
-            agent.context['inbound_peers']) <= agent.max_inbound_peers

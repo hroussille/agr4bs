@@ -54,6 +54,7 @@ class Scheduler(ExternalAgent):
 
         if agent is not None:
             agent.date = message.date
+            self._environment.date = message.date
             agent.handle_message(message)
 
     def run(self, condition: callable, progress=None, init=True, cleanup=True):
