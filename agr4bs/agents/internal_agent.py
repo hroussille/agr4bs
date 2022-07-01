@@ -1,9 +1,7 @@
 """
     InternalAgent file class implementation
 """
-
 from typing import Callable
-
 from ..common import Serializable
 from .agent import Agent, AgentType
 import inspect
@@ -126,20 +124,23 @@ class InternalAgent(Agent):
 
     def __init__(self, name: str):
         super().__init__(name, AgentType.INTERNAL_AGENT)
-        self._constructor_called = False
+        self._deployed = False
         self.ctx = None
 
-    def constructor(self):
-        """
-            Constructor of the InternalAgent inside the blockchain context.
-        """
+    @property
+    def deployed(self):
+        return self._deployed
 
-        if self._constructor_called is False:
-            self._constructor_called = True
-            return Success()
+    def add_role(self, role: 'Role') -> bool:
+        if self._deployed is False:
+            return super().add_role(role)
+        raise ValueError("Attempting to add a role to an already deployed internal agent");
 
-        else:
-            return Revert("Constructor already called")
+
+    def remove_role(self, role: 'Role') -> bool:
+        if self._deployed is False:
+            return super().remove_role(role)
+        raise ValueError("Attempting to remove a role from an already deployed internal agent");
 
     def validate_call(self, calldata: InternalAgentCalldata, ctx: 'ExecutionContext') -> InternalAgentResponse:
 
@@ -192,6 +193,9 @@ class InternalAgent(Agent):
 
         return hasattr(function, 'payable')
 
+    def constructor(self):
+        raise ValueError("Constructor must be defined")
+
     def entry_point(self, calldata: InternalAgentCalldata, ctx: 'ExecutionContext'):
         """
             The entry point of the InternalAgent, this method is the only method invoked by
@@ -203,6 +207,12 @@ class InternalAgent(Agent):
 
         if error_response is not None:
             return error_response, []
+
+        if calldata.function == "constructor":
+            if self._deployed is False:
+                self._deployed = True
+            else:
+                raise ValueError("Constructor already called")
 
         response = getattr(self, calldata.function)(**calldata.parameters)
 

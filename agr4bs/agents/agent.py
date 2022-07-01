@@ -3,7 +3,6 @@
 """
 
 from enum import Enum
-
 from .context import Context
 
 
