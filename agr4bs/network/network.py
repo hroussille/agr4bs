@@ -2,57 +2,86 @@
     Network file class implementation
 """
 
-from ..common import Transaction, Block
-from ..agents import Agent
+import queue
+import random
+import datetime
+
+from agr4bs.network.messages import Message
+from ..agents.agent import AgentType
 
 
 class Network():
 
     """
-        Network class implementation :
+        AioNetwork class implementation :
 
         Simulates a network, where messages can be sent (broadcast)
         with a configurable delay and message drop probability.
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, delay: int = 0, drop_rate: float = 0):
+        self._delay = delay
+        self._drop_rate = drop_rate
+        self._message_count = 0
+        self._message_queue = queue.PriorityQueue()
 
-    def broadcast_transaction(self, tx: Transaction) -> None:
-        """ Broadcast a Transaction to the whole network
+    @property
+    def delay(self):
+        """
+            Get the average network delay
+        """
+        return self._delay
 
-            :param tx: the transaction to Broadcast
-            :type tx: Transaction
+    @property
+    def drop_rate(self):
+        """
+            Get the average message drop rate
+        """
+        return self._drop_rate
+
+    def send_system_message(self, message: Message) -> None:
+        """
+            Send a system message to the network.
+            System messages are not subject to delay or drops.
+        """
+        message.nonce = self._message_count
+        self._message_count = self._message_count + 1
+        self._message_queue.put(message)
+
+    def send_message(self, message: Message, no_drop=False) -> None:
+        """
+            Send a message to the network.
+        """
+        if random.random() > self.drop_rate or no_drop is True:
+            delta = datetime.timedelta(
+                milliseconds=int(random.random() * self.delay))
+            message.date = message.date + delta
+            message.nonce = self._message_count
+            self._message_count = self._message_count + 1
+            self._message_queue.put(message)
+
+    def has_message(self):
+        return not self._message_queue.empty()
+
+    def get_next_message(self):
+        """
+            Pop and return the next message from the message priority queue
+        """
+        return self._message_queue.get()
+
+    def flush_agent(self, agent: 'ExternalAgent') -> None:
+        """ Flush an ExternalAgent out of the Network
+
+        :param agent: The ExternalAgent to flush out
+        :type agent: ExternalAgent
         """
 
-    def send_transaction(self, tx: Transaction, agent: Agent) -> None:
-        """ Send a Transaction to a specific Agent
-
-            :param tx: the transaction to send
-            :type tx: Transaction
-            :param agent: the agent who should receive the Transaction
-            :type agent: Agent
+    def register_agent(self, agent: 'ExternalAgent') -> None:
         """
+            Register an ExternalAgent in the Network.
 
-    def broadcast_block(self, block: Block) -> None:
-        """ Broadcast a Block to the whole network
-
-            :param block: the block to Broadcast
-            :type block: Block
+            :param agent: The agent to register
+            :type agent: ExternalAgent
         """
-
-    def send_block(self, block: Block, agent: Agent) -> None:
-        """ Send a Block to a specific Agent
-
-            :param block: the Block to send
-            :type block: Block
-            :param agent: the agent who should receive the Block
-            :type agent: Agent
-        """
-
-    def flush_agent(self, agent: Agent) -> None:
-        """ Flush an Agent out of the Network
-
-        :param agent: The Agent to flush out
-        :type agent: Agent
-        """
+        if agent.type != AgentType.EXTERNAL_AGENT:
+            raise ValueError("Network only allow EXTERNAL_AGENT")

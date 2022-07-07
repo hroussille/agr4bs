@@ -11,8 +11,10 @@ def test_agent_deletion():
         Test that an agent is correctly removed from the Environment
     """
 
-    agent = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    env = agr4bs.Environment()
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Factory.build_block(None, "genesis", [])
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent)
     env.remove_agent(agent)
@@ -26,8 +28,10 @@ def test_agent_double_deletion():
         Test that an agent cannot be deleted twice from the Environment
     """
 
-    agent = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    env = agr4bs.Environment()
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Factory.build_block(None, "genesis", [])
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent)
     env.remove_agent(agent)

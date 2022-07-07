@@ -5,8 +5,6 @@
 
 import pickle
 
-#pylint: disable=too-few-public-methods
-
 
 class Serializable:
 
@@ -19,3 +17,15 @@ class Serializable:
             Serialize the current object
         """
         return pickle.dumps(self)
+
+    @classmethod
+    def from_serialized(cls, serialized: str) -> 'Serializable':
+        """
+            Rebuilds a Block from a serialized Block
+        """
+        deserialized = pickle.loads(serialized)
+
+        if not isinstance(deserialized, cls):
+            return None
+
+        return deserialized

@@ -6,7 +6,7 @@
 import hashlib
 import pickle
 
-from .serializable import Serializable
+from ..common import Serializable
 from .transaction import Transaction
 
 
@@ -50,7 +50,7 @@ class Block(Serializable):
         return self._transactions
 
     @property
-    def creator(self) -> "Agent":
+    def creator(self) -> str:
         """ Get the Agent that created the Block
 
             :returns: the Agent that created the Block
@@ -75,6 +75,13 @@ class Block(Serializable):
             :rtype: str
         """
         return self._hash
+
+    @hash.setter
+    def hash(self, value: str):
+        """
+            Manually set the hash of the Block
+        """
+        self._hash = value
 
     @property
     def height(self) -> int:
@@ -109,14 +116,9 @@ class Block(Serializable):
 
         return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()
 
-    @ staticmethod
-    def from_serialized(serialized: str) -> 'Block':
-        """
-            Rebuilds a Block from a serialized Block
-        """
-        block = pickle.loads(serialized)
+    def __eq__(self, __o: object) -> bool:
 
-        if not isinstance(block, Block):
-            return None
+        if not isinstance(__o, Block):
+            return False
 
-        return block
+        return self._hash == __o.compute_hash()

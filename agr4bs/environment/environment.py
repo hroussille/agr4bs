@@ -1,12 +1,15 @@
 """
     Environment file class implementation
 """
+import random
 
-from ..agents.agent import Agent
-from ..network import Network
+from ..network.messages import StopSimulation
+from ..agents import ExternalAgent
+from ..factory import Factory
+from agr4bs import agents
 
 
-class Environment():
+class Environment(ExternalAgent):
 
     """
         Environment class implementation :
@@ -15,27 +18,28 @@ class Environment():
         to form a complete simulation.
     """
 
-    def __init__(self, network: Network = None, initial_state: dict = None) -> None:
-
-        if initial_state is None:
-            initial_state = {}
-
-        if network is None:
-            network = Network()
-
-        self._network = network
+    def __init__(self, factory: Factory):
+        super().__init__("environment", None, factory)
         self._agents = {}
-        self.set_initial_state(initial_state)
+        self._network.register_agent(self)
+        self._agent_tasks = []
+        self._running = False
 
-    def set_initial_state(self, initial_state: dict):
-        """ Set the initial state (i.e., genesis state) of the Environment
-
-            :param initial_state: the initial_state to set to the Environment
-            :type initial_state: dict
+    @property
+    def agents_names(self):
         """
-        self._initial_state = initial_state
+            Get the list of agent names
+        """
+        return list(self._agents.keys())
 
-    def add_agent(self, agent: Agent):
+    @property
+    def running(self):
+        """
+            Get the indicator about the running status of the environment.
+        """
+        return self._running
+
+    def add_agent(self, agent: ExternalAgent):
         """ Add an Agent to the Environment
 
             :param agent: the Agent to add to the Environment
@@ -44,11 +48,15 @@ class Environment():
         """
         if self.has_agent_by_name(agent.name):
             raise ValueError(
-                "Attempting to add an already existing agent from the environment")
+                "Attempting to add an already existing agent to the environment")
 
         self._agents[agent.name] = agent
+        self._network.register_agent(agent)
 
-    def remove_agent(self, agent: Agent):
+        if self._running is True:
+            agent.init(self._date)
+
+    def remove_agent(self, agent: ExternalAgent):
         """ Remove an Agent from the Environment
 
             :param agent: the Agent to remove from the Environment
@@ -60,9 +68,11 @@ class Environment():
                 "Attempting to remove a non existing agent from the environment")
 
         self._network.flush_agent(agent)
+        agent.cleanup()
+
         del self._agents[agent.name]
 
-    def has_agent(self, agent: Agent) -> bool:
+    def has_agent(self, agent: ExternalAgent) -> bool:
         """ Check if an agent is part of the Environment
 
             :param agent: the Agent to check for
@@ -78,7 +88,7 @@ class Environment():
         """
         return agent_name in self._agents
 
-    def get_agent(self, agent: Agent) -> Agent:
+    def get_agent(self, agent: ExternalAgent) -> ExternalAgent:
         """ Get a specific agent from the Environment
 
             :param agent: the Agent to retrieve
@@ -86,7 +96,7 @@ class Environment():
         """
         return self.get_agent_by_name(agent.name)
 
-    def get_agent_by_name(self, agent_name: str) -> Agent:
+    def get_agent_by_name(self, agent_name: str) -> ExternalAgent:
         """ Get a specific agent from the Environment
 
             :param agent_name: the Agent to retrieve
@@ -96,3 +106,38 @@ class Environment():
             return None
 
         return self._agents[agent_name]
+
+    def init(self, date):
+
+        super().init(date)
+
+        agents_names = self.agents_names
+        random.shuffle(agents_names)
+
+        for agent_name in agents_names:
+            self._agents[agent_name].init(date)
+
+    def cleanup(self):
+        super().cleanup()
+
+        agents_names = self.agents_names
+        random.shuffle(agents_names)
+
+        for agent_name in agents_names:
+            self._agents[agent_name].cleanup()
+
+    def stop(self):
+        """
+            Set the stop flag leading to the termination of the simulation
+        """
+        self._exit = True
+
+    def _notify_stop_simulation(self):
+        """
+            Notify every agent that the simulation should stop.
+            This is done through system messages.
+        """
+
+        message = StopSimulation(self._name)
+        to = list(self._agents.keys())
+        self.send_system_message(message, to)

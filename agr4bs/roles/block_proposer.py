@@ -15,10 +15,13 @@ The BlockProposer implementation which MUST contain the following behaviors :
 - propose_block
 """
 
-from ..agents import Agent, ContextChange, AgentType
+
+from ..agents import ExternalAgent, ContextChange, AgentType
+from ..events import CREATE_BLOCK
+from ..network.messages import DiffuseBlock
 from .role import Role, RoleType
-from ..common import Transaction
-from ..common import Block
+from ..blockchain import Block, Transaction
+from ..common import on, export
 
 
 class BlockProposerContextChange(ContextChange):
@@ -58,7 +61,8 @@ class BlockProposer(Role):
         return BlockProposerContextChange()
 
     @staticmethod
-    def select_transaction(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> list[Transaction]:
+    @export
+    def select_transaction(agent: ExternalAgent, transactions: list[Transaction]) -> list[Transaction]:
         """ Select a subset of transactions for inclusion in a block
 
             :param transactions: the available transactions
@@ -66,10 +70,24 @@ class BlockProposer(Role):
             :returns: the list of selected transactions
             :rtype: list[Transaction]
         """
-        raise NotImplementedError
+        return []
 
     @staticmethod
-    def create_block(agent: Agent, transactions: list[Transaction], *args, **kwargs) -> Block:
+    @export
+    @on(CREATE_BLOCK)
+    def can_create_block(agent: ExternalAgent):
+        """
+            Behavior called on CREATE_BLOCK event. This is a system event triggered
+            by the Environment.
+
+            It is a one time authorization to create and propose a new Block to the network.
+        """
+
+        agent.propose_block(agent.create_block([]))
+
+    @staticmethod
+    @export
+    def create_block(agent: ExternalAgent, transactions: list[Transaction]) -> Block:
         """ Creates a block with the given transactions
 
             :param transactions: the transactions to include in the block
@@ -77,13 +95,16 @@ class BlockProposer(Role):
             :returns: the block with the transactions included in it
             :rtype: Block
         """
-        raise NotImplementedError
+        head_hash = agent.context['blockchain'].head.hash
+        return Block(head_hash, agent.name, transactions)
 
     @staticmethod
-    def propose_block(block: Block, *args, **kwargs):
+    @export
+    def propose_block(agent: ExternalAgent, block: Block):
         """ Propose a block to the network
 
             :param block: the block to propose to the network
             :type block: Block
         """
-        raise NotImplementedError
+        outbound_peers = list(agent.context['outbound_peers'])
+        agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)

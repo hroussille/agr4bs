@@ -2,7 +2,9 @@
     State file class implementation
 """
 
+from math import inf
 import pickle
+import copy
 from .state_change import StateChange, StateChangeType
 from .state_change import UpdateAccountStorage
 from .state_change import CreateAccount, DeleteAccount
@@ -26,6 +28,7 @@ class State:
 
     def __init__(self) -> None:
         self._accounts: dict(Account) = {}
+        self._create_account(CreateAccount(Account('genesis', inf)))
 
     def _apply_jump_table(self, state_change_type: StateChangeType) -> None:
         """
@@ -115,7 +118,7 @@ class State:
             Internal method: decrement an Account nonce
         """
 
-        if not self.has_account(state_change.account):
+        if not self.has_account(state_change.account_name):
             raise ValueError("Cannot decrement nonce of non existing Account")
 
         self._accounts[state_change.account_name].decrement_nonce()
@@ -193,7 +196,7 @@ class State:
         if account is None:
             return None
 
-        return account.storage_at(key)
+        return account.get_storage_at(key)
 
     def get_account_internal_agent(self, account_name: str) -> 'InternalAgent':
         """
@@ -210,4 +213,5 @@ class State:
         """
             Copy the current State
         """
-        return pickle.loads(pickle.dumps(self))
+        return copy.deepcopy(self)
+        # return pickle.loads(pickle.dumps(self))

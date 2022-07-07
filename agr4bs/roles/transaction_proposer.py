@@ -16,7 +16,8 @@ The TransactionProposer implementation which MUST contain the following :
 
 from .role import Role, RoleType
 from ..agents import Agent, ContextChange, AgentType
-from ..common import Payload, Transaction
+from ..blockchain import Payload, Transaction
+from ..common import export
 
 
 class TransactionProposerContextChange(ContextChange):
@@ -54,6 +55,7 @@ class TransactionProposer(Role):
         return TransactionProposerContextChange()
 
     @staticmethod
+    @export
     def create_transaction(agent: Agent, paylaod: Payload, receiver: Agent) -> Transaction:
         """ Create a transaction with the given payload for the given receiver
 
@@ -67,6 +69,7 @@ class TransactionProposer(Role):
         raise NotImplementedError
 
     @staticmethod
+    @export
     def propose_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> None:
         """ Propose a transaction to the network
 

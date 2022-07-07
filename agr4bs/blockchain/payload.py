@@ -3,7 +3,7 @@
 """
 
 
-from .serializable import Serializable
+from ..common import Serializable
 
 
 class Payload(Serializable):
@@ -25,6 +25,12 @@ class Payload(Serializable):
 
         self._data = data
 
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, Payload):
+            return False
+
+        return __o.data == self._data
+
     @property
     def data(self) -> str:
         """ Get the data of the Payload
@@ -33,14 +39,3 @@ class Payload(Serializable):
             :rtype: str
         """
         return self._data
-
-    def serialize(self) -> bytes:
-        """ Serialize the Payload
-
-            :returns: the serialized Payload
-            :rtype: str
-        """
-        return self._data
-
-    def __str__(self) -> str:
-        return self.serialize()

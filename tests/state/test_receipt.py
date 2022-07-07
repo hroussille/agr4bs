@@ -16,11 +16,12 @@ def test_receipt_properties():
     state_changes = []
     reverted = False
 
-    receipt = agr4bs.Receipt(tx_hash, state_changes, reverted)
+    receipt = agr4bs.Receipt(tx_hash, state_changes, reverted, "")
 
     assert receipt.tx_hash == tx_hash
     assert receipt.state_changes == state_changes
     assert receipt.reverted == reverted
+    assert receipt.revert_reason == ""
 
 
 def test_receipt_properties_immutability():
@@ -32,7 +33,7 @@ def test_receipt_properties_immutability():
     state_changes = []
     reverted = False
 
-    receipt = agr4bs.Receipt(tx_hash, state_changes, reverted)
+    receipt = agr4bs.Receipt(tx_hash, state_changes, reverted, "")
 
     with pytest.raises(AttributeError) as excinfo:
         receipt.tx_hash = "fake_hash"
@@ -44,4 +45,8 @@ def test_receipt_properties_immutability():
 
     with pytest.raises(AttributeError) as excinfo:
         receipt.reverted = True
+        assert "can't set attribute" in str(excinfo.value)
+
+    with pytest.raises(AttributeError) as excinfo:
+        receipt.revert_reason = "some reason"
         assert "can't set attribute" in str(excinfo.value)

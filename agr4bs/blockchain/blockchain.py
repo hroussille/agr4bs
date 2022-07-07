@@ -20,6 +20,8 @@ class Blockchain():
     """
 
     def __init__(self, genesis: Block) -> None:
+
+        genesis.compute_hash()
         self._genesis = genesis
         self._head = self._genesis
         self._blocks = {}
@@ -37,6 +39,7 @@ class Blockchain():
         """
         if _hash in self._blocks:
             return self._blocks[_hash]
+
         return None
 
     def get_chain(self) -> list[Block]:
@@ -53,6 +56,24 @@ class Blockchain():
             current = self._blocks[current.parent_hash]
 
         return list(chain)
+
+    @property
+    def genesis(self) -> Block:
+        """ Get the genesis Block of the Blockchain
+
+            :returns: The genesis Block
+            :rtype: Block
+        """
+        return self._genesis
+
+    @property
+    def head(self) -> Block:
+        """ Get the head Block of the Blockchain
+
+            :returns: The head Block
+            :rtype: Block
+        """
+        return self._head
 
     def is_block_on_main_chain(self, block: Block) -> bool:
         """ Check wether a Block is part of the main chain or not
@@ -73,24 +94,6 @@ class Blockchain():
             current = self.get_block(current.parent_hash)
 
         return False
-
-    @property
-    def genesis(self) -> Block:
-        """ Get the genesis Block of the Blockchain
-
-            :returns: The genesis Block
-            :rtype: Block
-        """
-        return self._genesis
-
-    @property
-    def head(self) -> Block:
-        """ Get the head Block of the Blockchain
-
-            :returns: The head Block
-            :rtype: Block
-        """
-        return self._head
 
     def _unstage_blocks(self, block: Block) -> list[Block]:
         """ INTERNAL METHOD ONLY : DO NOT CALL IT EXTERNALLY
@@ -125,7 +128,7 @@ class Blockchain():
 
         return list(all_unstaged)
 
-    def _fork_rule(self, block: Block):
+    def is_new_head(self, block: Block) -> bool:
         """ INTERNAL METHOD ONLY : DO NOT CALL IT EXTERNALLY
 
             If block height is higher than head it becomes the new head
@@ -136,11 +139,87 @@ class Blockchain():
             :type block: Block
         """
         if block.height > self._head.height:
-            self._head = block
+            return True
 
-        elif block.height == self._head.height:
-            if random.random() > 0.5:
-                self._head = block
+        if block.height == self._head.height and random.random() > 0.5:
+            return True
+
+        return False
+
+    def get_subchain(self, child: Block, parent: Block, include_child=True, include_parent=False) -> bool:
+        """
+            Get the subchain between child and parent
+        """
+        path = deque()
+
+        if include_child is True:
+            path.appendleft(child)
+
+        while child.parent_hash != parent.hash and child.parent_hash is not None:
+            child = self._blocks[child.parent_hash]
+            path.appendleft(self._blocks[child.hash])
+
+        if child.parent_hash != parent.hash:
+            raise ValueError("Not path between blocks")
+
+        if include_parent:
+            path.appendleft(parent)
+
+        return list(path)
+
+    def is_close_parent(self, child_block: Block, parent_block: Block, limit=10) -> bool:
+        """
+            Find out if a Block is a distant parent of another Block
+        """
+        for _ in range(limit):
+
+            if child_block.parent_hash == parent_block.hash:
+                return True
+
+            if child_block.parent_hash is not None:
+                child_block = self._blocks[child_block.parent_hash]
+            else:
+                return False
+
+        return False
+
+    def get_nth_parent(self, block: Block, n: int) -> Block:
+        """
+            Get the nth parent of a given Block.
+            Stops at genesis block.
+        """
+
+        for _ in range(n):
+            if block.parent_hash is not None:
+                block = self._blocks[block.parent_hash]
+
+        return block
+
+    def find_common_ancestor(self, block_a: Block, block_b: Block) -> Block:
+        """
+            Find the first common ancestor of block_a and block_b
+            Worst case is assumed to be the genesis block
+        """
+
+        if block_a.height > block_b.height:
+            block_a = self.get_nth_parent(
+                block_a, block_a.height - block_b.height)
+        else:
+            block_b = self.get_nth_parent(
+                block_b, block_b.height - block_a.height)
+
+        while block_a.parent_hash is not None and block_b.parent_hash is not None:
+
+            if block_a == block_b:
+                return block_a
+
+            block_a = self._blocks[block_a.parent_hash]
+            block_b = self._blocks[block_b.parent_hash]
+
+        if block_a == block_b and block_a == self.genesis:
+            return self.genesis
+
+        raise ValueError("Blocks have no common ancestor")
 
     def _get_block_path(self, child: Block, parent: Block, include_child=True, include_parent=False) -> bool:
         path = deque()
@@ -231,7 +310,9 @@ class Blockchain():
 
         block.height = self._blocks[block.parent_hash].height + 1
         self._blocks[block.hash] = block
-        self._fork_rule(block)
+
+        if self.is_new_head(block):
+            self._head = block
 
         return True
 
@@ -270,8 +351,9 @@ class Blockchain():
         dependent_blocks = self._unstage_blocks(block)
 
         for dependent_block in dependent_blocks:
-            if self.add_block_strict(dependent_block) is not True:
-                raise ValueError("Chain is corrupted.")
+            if dependent_block.hash not in self._blocks:
+                if self.add_block_strict(dependent_block) is not True:
+                    raise ValueError("Chain is corrupted.")
 
         added_blocks += len(dependent_blocks)
 
@@ -279,16 +361,16 @@ class Blockchain():
         appended_blocks = []
 
         if previous_head != self._head:
-            if self._is_close_parent(self._head, previous_head, added_blocks):
-                appended_blocks = self._get_block_path(
+            if self.is_close_parent(self._head, previous_head, added_blocks):
+                appended_blocks = self.get_subchain(
                     self._head, previous_head)
             else:
-                common_ancestor = self._find_common_ancestor(
+                common_ancestor = self.find_common_ancestor(
                     self._head, previous_head)
 
-                reverted_blocks = self._get_block_path(
+                reverted_blocks = self.get_subchain(
                     previous_head, common_ancestor)
-                appended_blocks = self._get_block_path(
+                appended_blocks = self.get_subchain(
                     self._head, common_ancestor)
 
         return True, reverted_blocks, appended_blocks

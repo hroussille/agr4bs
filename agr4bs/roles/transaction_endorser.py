@@ -14,7 +14,8 @@ The TransactionProposer implementation which MUST contain the following :
 
 from ..agents import Agent, ContextChange, AgentType
 from .role import Role, RoleType
-from ..common import Transaction
+from ..blockchain import Transaction
+from ..common import export
 
 
 class TransactionEndorserContextChange(ContextChange):
@@ -53,6 +54,7 @@ class TransactionEndorser(Role):
         return TransactionEndorserContextChange()
 
     @staticmethod
+    @export
     def endorse_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> bool:
         """ Endorse a specific transaction
 

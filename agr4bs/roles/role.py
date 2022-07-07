@@ -3,19 +3,14 @@
     Role file class implementation
 """
 
-from enum import Enum, EnumMeta
+from enum import Enum
+from ..common import IterableEnumMeta
 from ..agents import ContextChange, AgentType
+import inspect
+import itertools
 
 
-class BindBlackListMeta(EnumMeta):
-    """
-        Meta class to allow Enum retrieval as a list
-    """
-    def __contains__(cls, item):
-        return item in [v.value for v in cls.__members__.values()]
-
-
-class BindBlackList(Enum, metaclass=BindBlackListMeta):
+class BindBlackList(Enum, metaclass=IterableEnumMeta):
     """
         Enumeration of the black listed Roles static methods
         (i.e., behaviors).
@@ -37,7 +32,9 @@ class RoleType(Enum):
 
     BLOCKCHAIN_MAINTAINER = "BLOCKCHAIN_MAINTAINER"
     BLOCK_PROPOSER = "BLOCK_PROPOSER"
+    BLOCK_BUILDER = "BLOCK_SEQUENCER"
     BLOCK_ENDORSER = "BLOCK_ENDORSER"
+    BLOCK_SEQUENCER = "BLOCK_SEQUENCER"
     TRANSACTION_PROPOSER = "TRANSACTION_PROPOSER"
     TRANSACTION_ENDORSER = "TRANSACTION_ENDORSER"
     INVESTOR = "INVESTOR"
@@ -45,6 +42,9 @@ class RoleType(Enum):
     ORACLE = "ORACLE"
     CONTRACTOR = "CONTRACTOR"
     GROUP_MANAGER = "GROUP_MANAGER"
+    PEER = "PEER"
+    BOOTSTRAP = "BOOTSTRAP"
+    BLOCK_CREATOR_ELECTOR = "BLOCK_CREATOR_ELECTOR"
 
 
 class Role:
@@ -59,6 +59,7 @@ class Role:
     def __init__(self, _type: RoleType, agent_type: AgentType, dependencies: list[RoleType] = None) -> None:
         self._type = _type
         self._agent_type = agent_type
+        self._event_handlers = {}
 
         if dependencies is None:
             dependencies = []
@@ -78,12 +79,19 @@ class Role:
         """
         return ContextChange()
 
-    @staticmethod
-    def dependencies() -> list[RoleType]:
+    @property
+    def dependencies(self) -> list[RoleType]:
         """
             The dependencies function should return the list of RoleTypes that this Role relies on.
         """
-        return []
+        return self._dependencies
+
+    @property
+    def event_handlers(self) -> dict:
+        """ Get the event handlers of the Role
+
+            :returns: the dictionary of
+        """
 
     @property
     def behaviors(self) -> dict:
@@ -92,7 +100,17 @@ class Role:
             :returns: the dictionary of behaviors with the format {behavior_name: behavior_implementation}
             :rtype: dict
         """
-        return {behavior: implementation for behavior, implementation in self.__class__.__dict__.items() if behavior not in BindBlackList and isinstance(implementation, staticmethod)}
+
+        members = inspect.getmembers(
+            self.__class__, predicate=inspect.isfunction)
+        behaviors = {}
+
+        for member in members:
+            name, implementation = member
+            if hasattr(implementation, 'export'):
+                behaviors[name] = implementation
+
+        return behaviors
 
     @property
     def type(self) -> RoleType:
@@ -103,7 +121,7 @@ class Role:
         """
         return self._type
 
-    @property
+    @ property
     def agent_type(self) -> AgentType:
         """ Get the AgentType the Role is able to be mounted to
 

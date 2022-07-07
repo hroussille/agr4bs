@@ -9,12 +9,15 @@ def test_agent_retrieval():
     """
         Test that an agent can be retrived by its object reference
     """
-    agent0 = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent1 = agr4bs.Agent("agent1", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent2 = agr4bs.Agent("agent2", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent3 = agr4bs.Agent("agent3", agr4bs.AgentType.EXTERNAL_AGENT)
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Factory.build_block(None, "genesis", [])
 
-    env = agr4bs.Environment()
+    agent0 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    agent1 = agr4bs.ExternalAgent("agent1", genesis, agr4bs.Factory)
+    agent2 = agr4bs.ExternalAgent("agent2", genesis, agr4bs.Factory)
+    agent3 = agr4bs.ExternalAgent("agent3", genesis, agr4bs.Factory)
+
+    env = agr4bs.Environment(agr4bs.Factory)
     env.add_agent(agent0)
     env.add_agent(agent1)
     env.add_agent(agent2)
@@ -34,12 +37,15 @@ def test_agent_retrieval_by_name():
     """
         Test that an agent can be retrived by its name
     """
-    agent0 = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent1 = agr4bs.Agent("agent1", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent2 = agr4bs.Agent("agent2", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent3 = agr4bs.Agent("agent3", agr4bs.AgentType.EXTERNAL_AGENT)
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Factory.build_block(None, "genesis", [])
 
-    env = agr4bs.Environment()
+    agent0 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    agent1 = agr4bs.ExternalAgent("agent1", genesis, agr4bs.Factory)
+    agent2 = agr4bs.ExternalAgent("agent2", genesis, agr4bs.Factory)
+    agent3 = agr4bs.ExternalAgent("agent3", genesis, agr4bs.Factory)
+
+    env = agr4bs.Environment(agr4bs.Factory)
     env.add_agent(agent0)
     env.add_agent(agent1)
     env.add_agent(agent2)

@@ -29,8 +29,10 @@ def test_payload_serialization():
     """
         Test Payload serialization
     """
-    payload1 = Payload(b"deadbeef")
-    payload2 = Payload()
 
-    assert payload1.serialize() == b"deadbeef"
-    assert payload2.serialize() == b""
+    data = b"deadbeed"
+
+    payload = Payload(data)
+    serialized = payload.serialize()
+
+    assert Payload.from_serialized(serialized) == payload

@@ -17,7 +17,7 @@ The Investor implementation which MUST contain the following behaviors :
 
 from .role import Role, RoleType
 from ..agents import Agent, ContextChange, AgentType
-from ..common import Investment
+from ..common import Investment, export
 
 
 class InvestorContextChange(ContextChange):
@@ -55,6 +55,7 @@ class Investor(Role):
         return InvestorContextChange()
 
     @staticmethod
+    @export
     def specify_investment(agent: Agent, *args, **kwargs) -> Investment:
         """ Specify an investment according to the current investment policy
 
@@ -66,6 +67,7 @@ class Investor(Role):
         raise NotImplementedError
 
     @staticmethod
+    @export
     def invest(agent: Agent, investee: Agent, investment: Investment, *args, **kwargs) -> bool:
         """ Invest in a specific Agent
 
@@ -81,6 +83,7 @@ class Investor(Role):
         raise NotImplementedError
 
     @staticmethod
+    @export
     def withdraw(agent: Agent, investee: Agent, *args, **kwargs) -> bool:
         """ Withdraw investments from a specific agent
 

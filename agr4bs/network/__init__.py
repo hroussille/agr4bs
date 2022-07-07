@@ -3,3 +3,4 @@
 """
 
 from .network import Network
+from .messages import Message

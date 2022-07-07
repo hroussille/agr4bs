@@ -40,8 +40,13 @@ def test_block_proposer_addition():
     - Agent has all the BlockProposer behaviors
     - Agent has all the BlockProposer context changes
     """
-    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
+    genesis = agr4bs.Block(None, "genesis")
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.BlockProposer()
+
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+
     agent.add_role(role)
 
     assert agent.has_role(agr4bs.RoleType.BLOCK_PROPOSER)
@@ -64,8 +69,12 @@ def test_block_proposer_removal():
     - Agent has none of the BlockProposer behaviors
     - Agent has none of the BlockProposer context changes
     """
-    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
+    genesis = agr4bs.Block(None, "genesis")
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.BlockProposer()
+
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
 
     agent.add_role(role)
     agent.remove_role(role)

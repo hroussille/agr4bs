@@ -10,8 +10,12 @@ def test_agent_addition():
     """
         Test that an agent is correctly added to the Environment
     """
-    agent = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    env = agr4bs.Environment()
+
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Block(
+        parent_hash=None, creator='genesis', transactions=[])
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent)
 
@@ -27,15 +31,18 @@ def test_agent_double_addition():
         Test that an agent cannot be added twice
     """
 
-    agent = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    env = agr4bs.Environment()
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Block(
+        parent_hash=None, creator='genesis', transactions=[])
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent)
 
     with pytest.raises(ValueError) as excinfo:
         env.add_agent(agent)
 
-    assert "Attempting to add an already existing agent from the environment" in str(
+    assert "Attempting to add an already existing agent to the environment" in str(
         excinfo.value)
 
 
@@ -44,15 +51,18 @@ def test_agent_double_addition_name_conflict():
         Test that two agent with conflicting mames cannot be
         added to the state
     """
-    agent0 = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
-    agent1 = agr4bs.Agent("agent0", agr4bs.AgentType.EXTERNAL_AGENT)
+    agr4bs.Factory.build_network(reset=True)
+    genesis = agr4bs.Block(
+        parent_hash=None, creator='genesis', transactions=[])
+    agent0 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    agent1 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
 
-    env = agr4bs.Environment()
+    env = agr4bs.Environment(agr4bs.Factory)
 
     env.add_agent(agent0)
 
     with pytest.raises(ValueError) as excinfo:
         env.add_agent(agent1)
 
-    assert "Attempting to add an already existing agent from the environment" in str(
+    assert "Attempting to add an already existing agent to the environment" in str(
         excinfo.value)
