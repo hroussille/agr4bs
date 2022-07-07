@@ -3,6 +3,7 @@
     Test suite for the InternalAgent class
 """
 import agr4bs
+import pytest
 from agr4bs.agents.agent import AgentType
 from agr4bs.agents.internal_agent import InternalAgent
 from agr4bs.common import payable, export
@@ -23,8 +24,9 @@ class CustomInternalAgentRole(agr4bs.Role):
         super().__init__(RoleType.CONTRACTOR, AgentType.INTERNAL_AGENT, [])
 
     @staticmethod
+    @export
     def constructor(self):
-        super().constructor()
+        return Success()
 
     @staticmethod
     @export
@@ -70,8 +72,15 @@ def test_internal_agent_default_constructor():
     """
 
     internal_agent = agr4bs.InternalAgent("internal_agent_0")
+    internal_agent.add_role(CustomInternalAgentRole())
 
-    response = internal_agent.constructor()
+    calldata = agr4bs.InternalAgentCalldata("constructor")
+    state = agr4bs.State()
+    account = Account(internal_agent.name, internal_agent=internal_agent)
+    state.apply_state_change(CreateAccount(account))
+    context = ExecutionContext(
+        "origin", "from", "internal_agent_0", 0, 0, state, agr4bs.VM)
+    response = internal_agent.entry_point(calldata, context)
 
     assert response.reverted is False
 
@@ -81,14 +90,23 @@ def test_internal_agent_default_constructor_double_call():
         Test that the constructor cannot be called twice
     """
     internal_agent = agr4bs.InternalAgent("internal_agent_0")
+    internal_agent.add_role(CustomInternalAgentRole())
 
-    response = internal_agent.constructor()
+    calldata = agr4bs.InternalAgentCalldata("constructor")
+    state = agr4bs.State()
+    account = Account(internal_agent.name, internal_agent=internal_agent)
+    state.apply_state_change(CreateAccount(account))
+    context = ExecutionContext(
+        "origin", "from", "internal_agent_0", 0, 0, state, agr4bs.VM)
+
+    response = internal_agent.entry_point(calldata, context)
 
     assert response.reverted is False
 
-    response = internal_agent.constructor()
+    with pytest.raises(ValueError) as excinfo:
+        response = internal_agent.entry_point(calldata, context)
 
-    assert response.reverted is True
+    assert "Constructor already called" in str(excinfo.value)
 
 
 def test_internal_agent_validate_function_valid():
