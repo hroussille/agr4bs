@@ -2,22 +2,24 @@
 """
     DefaultVM file class implementation
 """
-
-from ast import Add
 from enum import Enum
 
-from agr4bs.agents.internal_agent import InternalAgentDeployement
+from agr4bs.agents.internal_agent import InternalAgentDeployement, Success
 from .execution_context import ExecutionContext
-from ..state import State, Account, Receipt, StateChange
+from ..state import State, Account, Receipt
 from ..state import CreateAccount, AddBalance, RemoveBalance, IncrementAccountNonce
 from ..blockchain import Transaction
-from ..agents import InternalAgent, InternalAgentCalldata, InternalAgentResponse
+from ..agents import InternalAgent, InternalAgentCalldata, InternalAgentResponse, Revert
 
 
 class TransactionType(Enum):
+    """
+        Valid transaction types
+    """
     TRANSFER = "TRANSFER"
     CALL = "CALL"
     DEPLOYEMENT = "DEPLOYEMENT"
+    NOOP = "NOOP"
 
 
 class VM:
@@ -43,123 +45,89 @@ class VM:
         if tx.to is None and len(tx.payload.data) > 0:
             return TransactionType.DEPLOYEMENT
 
-        if state.get_account_internal_agent(tx.to) is None:
+        if state.get_account_internal_agent(tx.to) is None and tx.value > 0:
             return TransactionType.TRANSFER
 
-        if state.get_account_internal_agent(tx.to) is not None:
+        if len(tx.payload.data) > 0:
             return TransactionType.CALL
 
-    @staticmethod
-    def _get_transfer_changes(ctx: ExecutionContext, create: bool = True):
+        return TransactionType.NOOP
 
+    @staticmethod
+    def _get_context_from_tx(tx: Transaction, state: State) -> ExecutionContext:
+        return ExecutionContext(tx.origin, tx.origin, tx.to, tx.value, 0, state, VM)
+
+    @staticmethod
+    def transfer(ctx: ExecutionContext) -> InternalAgentResponse:
+        recipient = ctx.state.get_account(ctx.to)
         changes = []
 
-        recipient = ctx.state.get_account(ctx.to)
+        if ctx.state.get_account_balance(ctx.caller) < ctx.value:
+            return Revert("VM: Invalid balance for transfer")
 
-        if recipient is None and create is True:
+        if recipient is None:
             changes.append(CreateAccount(Account(ctx.to)))
 
         if ctx.value > 0:
             changes.append(RemoveBalance(ctx.caller, ctx.value))
             changes.append(AddBalance(ctx.to, ctx.value))
 
-        return changes
+        ctx.state.apply_batch_state_change(changes)
+        ctx.merge_changes(changes)
+
+        return Success()
 
     @staticmethod
-    def _do_deployement(state: State, tx: Transaction):
-        pre_changes = []
-        raw = tx.payload.data
-        deployement = InternalAgentDeployement.from_serialized(raw)
-        agent: InternalAgent = deployement.agent()
-        account = Account(agent.name, 0, 0, agent)
-
-        # Populate pre_changes with the account creation
-        # and the value transfer if any
-        pre_changes.append(CreateAccount(account))
-        pre_changes += VM._do_transfer(state,
-                                       tx.origin, tx.to, tx.value, create=False)
-        state.apply_batch_state_change(pre_changes)
-
-        callee: InternalAgent = state.get_account_internal_agent(tx.to)
-        calldata = deployement.constructor_calldata
-
-        context: ExecutionContext = ExecutionContext(
-            tx.origin, tx.origin, tx.value, 0, state, VM)
-        (response, call_changes) = callee.entry_point(calldata, context)
-
-    def _do_call(self, state: State, tx: Transaction):
-        raw = tx.payload.data
-        calldata = InternalAgentCalldata.from_serialized(raw)
-
-        pre_changes = VM._do_transfer(state, tx.origin, tx.to, tx.value)
-
-        state.apply_batch_state_change(pre_changes)
-        callee: InternalAgent = state.get_account_internal_agent(tx.to)
-
-        context: ExecutionContext = ExecutionContext(
-            tx.origin, tx.origin, tx.value, 0, state, self)
-        (response, call_changes) = callee.entry_point(calldata, context)
-
-        if response.reverted is True:
-            return Receipt(tx.hash, [], response.reverted, response.revert_reason)
-
-        changes = pre_changes + call_changes
-
-        return Receipt(tx.hash, changes, False, "")
+    def deploy(deployement: InternalAgentDeployement, ctx: ExecutionContext):
+        pass
 
     @staticmethod
-    def process_tx_new(state: State, tx: Transaction) -> Receipt:
+    def call(calldata: InternalAgentCalldata, ctx: ExecutionContext) -> InternalAgentResponse:
+        if ctx.depth > 1024:
+            return Revert("VM : Max call depth exceeded")
+
+        if ctx.value > 0:
+            result = VM.transfer(ctx)
+
+            if result.reverted:
+                return result
+
+        callee: InternalAgent = ctx.state.get_account_internal_agent(ctx.to)
+
+        if callee is None:
+            return Revert("VM : No InternalAgent to call")
+
+        response = callee.entry_point(calldata, ctx)
+
+        return response
+
+    @staticmethod
+    def process_tx(state: State, tx: Transaction) -> Receipt:
         tx_type = VM._get_transaction_type(state, tx)
-        context = VM._get_context_from_tx(tx)
+        context = VM._get_context_from_tx(tx, state)
 
-        state.apply_state_change(IncrementAccountNonce(tx.origin))
+        context.changes.append(IncrementAccountNonce(tx.origin))
+        context.state.apply_batch_state_change(context.changes)
+
+        intermediate_context = context.copy()
+        intermediate_context.clear_changes()
 
         if tx_type == TransactionType.TRANSFER:
-            changes = VM._transfer_changes()
+            response = VM.transfer(intermediate_context)
+
         elif tx_type == TransactionType.DEPLOYEMENT:
-            changes = VM._deployement_changes()
+            deployement = InternalAgentDeployement.from_serialized(
+                tx.payload.data)
+            response = VM.deploy(deployement, intermediate_context)
+
         elif tx_type == TransactionType.CALL:
-            changes = VM._call_changes()
-
-    def process_tx(self, state: State, tx: Transaction) -> Receipt:
-        """
-            Process a tx according to the given State and returns the tx Receipt
-        """
-
-        reverted = False
-        revert_reason = ""
-
-        pre_changes = [IncrementAccountNonce(tx.origin)]
-        changes = []
-
-        if tx.value > 0 and tx.to is not None:
-
-            if state.get_account(tx.to) is None:
-                pre_changes.append(CreateAccount(Account(tx.to)))
-
-            pre_changes.append(RemoveBalance(tx.origin, tx.value))
-            pre_changes.append(AddBalance(tx.to, tx.value))
-
-        state.apply_batch_state_change(pre_changes)
-
-        recipient_account = state.get_account(tx.to)
-
-        if recipient_account is not None and recipient_account.internal_agent is not None:
             calldata = InternalAgentCalldata.from_serialized(tx.payload.data)
-            response, internal_changes = self._top_level_internal_call(
-                state, tx.origin, tx.to, tx.value, calldata)
+            response = VM.call(calldata, intermediate_context)
 
-            if response.reverted is False:
-                changes = changes + internal_changes
+        elif tx_type == TransactionType.NOOP:
+            response = Success()
 
-            reverted = response.reverted
-            revert_reason = response.revert_reason
+        if response.reverted is False:
+            context.merge_changes(intermediate_context.changes)
 
-        return Receipt(tx.hash, pre_changes + changes, reverted, revert_reason)
-
-    def _top_level_internal_call(self, state: State, _from: str, to: str, value: int, calldata: InternalAgentCalldata) -> tuple[InternalAgentResponse, list[StateChange]]:
-        agent: InternalAgent = state.get_account_internal_agent(to)
-        context: ExecutionContext = ExecutionContext(
-            _from, _from, value, 0, state, self)
-        response, changes = agent.entry_point(calldata, context)
-        return (response, changes)
+        return Receipt(tx.hash, context.changes, response.reverted, response.revert_reason)

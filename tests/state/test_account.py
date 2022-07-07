@@ -57,4 +57,4 @@ def test_account_storage():
     storage = {"key": "value"}
     account = agr4bs.Account("name", storage=storage)
 
-    assert account.storage_at("key") == "value"
+    assert account.get_storage_at("key") == "value"

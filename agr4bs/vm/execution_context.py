@@ -2,15 +2,17 @@
     ExecutionContext file class implementation
 """
 
-from ..blockchain import Transaction
 from ..state import State
+import pickle
+import copy
 
 
 class ExecutionContext:
 
-    def __init__(self, origin: str, _from: str, value: int, depth: int, state: State, vm: 'VM') -> None:
+    def __init__(self, origin: str, _from: str, to: str, value: int, depth: int, state: State, vm: 'VM') -> None:
         self._origin = origin
         self._from = _from
+        self._to = to
         self._value = value
         self._depth = depth
         self._state = state
@@ -24,6 +26,10 @@ class ExecutionContext:
     @property
     def caller(self):
         return self._from
+
+    @property
+    def to(self):
+        return self._to
 
     @property
     def value(self):
@@ -44,3 +50,16 @@ class ExecutionContext:
     @property
     def changes(self):
         return self._changes
+
+    def clear_changes(self):
+        self._changes = []
+
+    def merge_changes(self, changes: list):
+        self._changes = self._changes + changes
+
+    def copy(self) -> 'ExecutionContext':
+        """
+            Copy the current ExecutionContext
+        """
+        return copy.deepcopy(self)
+        # pickle.loads(pickle.dumps(self))

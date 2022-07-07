@@ -58,7 +58,7 @@ def test_block_creation():
         shared_percentage = 100 * head_count / len(agents)
         print("Head : " + head_hash + " shared by " + str(shared_percentage) +
               "% of the agents (height: " + str(heads_heights[head_hash]) + ")")
-        #assert head_count / len(agents) == 1
+        assert head_count / len(agents) == 1
 
     for head_hash, head_height in heads_heights.items():
         assert head_height > 1

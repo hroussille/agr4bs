@@ -97,7 +97,7 @@ class Account:
 
         self._storage[key] = value
 
-    def storage_at(self, key: str):
+    def get_storage_at(self, key: str):
         """
             Get storage[key]
         """
@@ -116,4 +116,12 @@ class Account:
         """
             Copy the current Account
         """
-        return pickle.loads(pickle.dumps(self))
+        save_internal_agent = self.internal_agent
+        self._internal_agent = None
+
+        copy = pickle.loads(pickle.dumps(self))
+        copy._internal_agent = save_internal_agent
+
+        self._internal_agent = save_internal_agent
+
+        return copy

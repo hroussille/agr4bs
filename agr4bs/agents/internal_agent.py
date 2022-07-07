@@ -3,7 +3,8 @@
 """
 
 from typing import Callable
-
+from deepdiff import DeepDiff, Delta
+from agr4bs.state.state_change import UpdateAccountStorage
 from ..common import Serializable
 from .agent import Agent, AgentType
 import inspect
@@ -128,6 +129,7 @@ class InternalAgent(Agent):
         super().__init__(name, AgentType.INTERNAL_AGENT)
         self._constructor_called = False
         self.ctx = None
+        self.account = None
 
     def constructor(self):
         """
@@ -148,15 +150,15 @@ class InternalAgent(Agent):
         value = ctx.value
 
         if self._validate_function(function_name) is False:
-            return InternalAgentResponse(reverted=True, revert_reason="Uknown function")
+            return InternalAgentResponse(reverted=True, revert_reason="InternalAgent: Uknown function")
 
         function = getattr(self, function_name)
 
         if self._validate_parameters(function, parameters) is False:
-            return InternalAgentResponse(reverted=True, revert_reason="Invalid parameters")
+            return InternalAgentResponse(reverted=True, revert_reason="InternalAgent: Invalid parameters")
 
         if self._validate_value(function, value) is False:
-            return InternalAgentResponse(reverted=True, revert_reason="Function is not payable")
+            return InternalAgentResponse(reverted=True, revert_reason="InternalAgent: Function is not payable")
 
         return None
 
@@ -192,7 +194,13 @@ class InternalAgent(Agent):
 
         return hasattr(function, 'payable')
 
-    def entry_point(self, calldata: InternalAgentCalldata, ctx: 'ExecutionContext'):
+    def get_storage_at(self, key: str) -> any:
+        return self.ctx.state.get_account_storage_at(self.ctx.to, key)
+
+    def set_storage_at(self, key: str, value: any):
+        self.account.set_storage_at(key, value)
+
+    def entry_point(self, calldata: InternalAgentCalldata, ctx: 'ExecutionContext') -> InternalAgentResponse:
         """
             The entry point of the InternalAgent, this method is the only method invoked by
             the execution environment. The InternalAgentRequest should be either handled or
@@ -202,8 +210,25 @@ class InternalAgent(Agent):
         error_response = self.validate_call(calldata, ctx)
 
         if error_response is not None:
-            return error_response, []
+            return error_response
+
+        previous_ctx = self.ctx
+        self.ctx = ctx
+
+        previous_account = ctx.state.get_account(ctx.to)
+        self.account = ctx.state.get_account(ctx.to)
 
         response = getattr(self, calldata.function)(**calldata.parameters)
 
-        return response, ctx.changes
+        if previous_account.storage != self.account.storage:
+            delta_apply = Delta(
+                DeepDiff(previous_account.storage, self.account.storage))
+            delta_revert = Delta(
+                DeepDiff(self.account.storage, previous_account.storage))
+            self.ctx.changes.append(UpdateAccountStorage(
+                self.name, delta_apply, delta_revert))
+
+        self.ctx = previous_ctx
+        self.account = previous_account
+
+        return response

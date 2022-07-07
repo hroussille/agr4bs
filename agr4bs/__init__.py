@@ -2,7 +2,7 @@
     Main agr4bs module
 """
 
-from .agents import Agent, AgentType, ExternalAgent, InternalAgent, InternalAgentCalldata, InternalAgentResponse
+from .agents import Agent, AgentType, ExternalAgent, InternalAgent, InternalAgentCalldata, InternalAgentResponse, InternalAgentDeployement
 from .groups import Group, GroupType
 from .roles import Role, RoleType
 from .blockchain.block import Block
