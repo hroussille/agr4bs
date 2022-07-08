@@ -2,6 +2,7 @@
 """
     DefaultVM file class implementation
 """
+from cgitb import reset
 from enum import Enum
 
 from agr4bs.agents.internal_agent import InternalAgentDeployement, Success
@@ -78,8 +79,34 @@ class VM:
         return Success()
 
     @staticmethod
-    def deploy(deployement: InternalAgentDeployement, ctx: ExecutionContext):
-        pass
+    def deploy(deployement: InternalAgentDeployement, ctx: ExecutionContext) -> InternalAgentResponse:
+        recipient = ctx.state.get_account(ctx.to)
+        changes = []
+
+        if ctx.depth > 1024:
+            return Revert("VM : Max call dapth exceeded")
+
+        if recipient is None and ctx.state.has_account(deployement.agent.name) is False:
+            changes.append(CreateAccount(
+                Account(deployement.agent.name, internal_agent=deployement.agent)))
+            ctx.state.apply_batch_state_change(changes)
+            ctx.merge_changes(changes)
+        else:
+            return Revert("VM : Deploying to an already existing account")
+
+        ctx.to = deployement.agent.name
+
+        if ctx.value > 0:
+            result = VM.transfer(ctx)
+
+            if result.reverted:
+                return result
+
+        if deployement.agent.has_behavior('constructor'):
+            result = VM.call(deployement.constructor_calldata, ctx)
+            return result
+
+        return Success()
 
     @staticmethod
     def call(calldata: InternalAgentCalldata, ctx: ExecutionContext) -> InternalAgentResponse:

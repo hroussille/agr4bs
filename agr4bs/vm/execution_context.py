@@ -31,6 +31,10 @@ class ExecutionContext:
     def to(self):
         return self._to
 
+    @to.setter
+    def to(self, new_recipient: str):
+        self._to = new_recipient
+
     @property
     def value(self):
         return self._value

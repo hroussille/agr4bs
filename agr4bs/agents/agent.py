@@ -174,3 +174,20 @@ class Agent():
             return None
 
         return self._roles[role_type]
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+
+        for role_type, _ in self._roles.items():
+            for behavior, _ in self._roles[role_type].behaviors.items():
+                if hasattr(self, behavior):
+                    del state[behavior]
+
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+        for role_type, _ in self._roles.items():
+            for behavior, implementation in self._roles[role_type].behaviors.items():
+                setattr(self, behavior, implementation.__get__(self, Agent))
