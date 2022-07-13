@@ -2,7 +2,6 @@
 """
     DefaultVM file class implementation
 """
-from cgitb import reset
 from enum import Enum
 
 from agr4bs.agents.internal_agent import InternalAgentDeployement, Success
@@ -11,6 +10,8 @@ from ..state import State, Account, Receipt
 from ..state import CreateAccount, AddBalance, RemoveBalance, IncrementAccountNonce
 from ..blockchain import Transaction
 from ..agents import InternalAgent, InternalAgentCalldata, InternalAgentResponse, Revert
+
+DEPTH_LIMIT = 32
 
 
 class TransactionType(Enum):
@@ -59,9 +60,16 @@ class VM:
         return ExecutionContext(tx.origin, tx.origin, tx.to, tx.value, 0, state, VM)
 
     @staticmethod
+    def get_next_context(ctx: ExecutionContext, _from: str, to: str, value: int):
+        return ExecutionContext(ctx.origin, _from, to, value, ctx.depth + 1, ctx.state.copy(), ctx.vm)
+
+    @staticmethod
     def transfer(ctx: ExecutionContext) -> InternalAgentResponse:
         recipient = ctx.state.get_account(ctx.to)
         changes = []
+
+        if ctx.depth > DEPTH_LIMIT:
+            return Revert("VM : Max call dapth exceeded")
 
         if ctx.state.get_account_balance(ctx.caller) < ctx.value:
             return Revert("VM: Invalid balance for transfer")
@@ -83,12 +91,15 @@ class VM:
         recipient = ctx.state.get_account(ctx.to)
         changes = []
 
-        if ctx.depth > 1024:
+        if ctx.depth > DEPTH_LIMIT:
             return Revert("VM : Max call dapth exceeded")
 
         if recipient is None and ctx.state.has_account(deployement.agent.name) is False:
-            changes.append(CreateAccount(
-                Account(deployement.agent.name, internal_agent=deployement.agent)))
+            changes.append(CreateAccount(Account(deployement.agent.name, internal_agent=deployement.agent)))
+
+            if ctx.state.get_account_internal_agent(ctx.caller) is not None:
+                changes.append(IncrementAccountNonce(ctx.caller))
+                
             ctx.state.apply_batch_state_change(changes)
             ctx.merge_changes(changes)
         else:
@@ -110,7 +121,7 @@ class VM:
 
     @staticmethod
     def call(calldata: InternalAgentCalldata, ctx: ExecutionContext) -> InternalAgentResponse:
-        if ctx.depth > 1024:
+        if ctx.depth > DEPTH_LIMIT:
             return Revert("VM : Max call depth exceeded")
 
         if ctx.value > 0:
@@ -119,12 +130,19 @@ class VM:
             if result.reverted:
                 return result
 
+        intermediate_ctx = ctx.copy()
+        intermediate_ctx.clear_changes()
+
         callee: InternalAgent = ctx.state.get_account_internal_agent(ctx.to)
 
         if callee is None:
             return Revert("VM : No InternalAgent to call")
 
-        response = callee.entry_point(calldata, ctx)
+        response = callee.entry_point(calldata, intermediate_ctx)
+
+        if response.reverted is False:
+            ctx.state.apply_batch_state_change(intermediate_ctx.changes)
+            ctx.merge_changes(intermediate_ctx.changes)
 
         return response
 
