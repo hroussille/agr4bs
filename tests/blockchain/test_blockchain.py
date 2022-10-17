@@ -196,3 +196,37 @@ def test_blockchain_add_block_fork_wrong_order_scenario():
 
     # pylint: disable=protected-access
     assert len(blockchain._staging_blocks.keys()) == 0
+
+
+def test_blockchain_mark_invalid_block():
+    """
+        Test that Blockchain.add_block() behaves as add_block_strict()
+        in the same scenario as test_add_block_strict()
+    """
+    genesis = Block(None, None, [])
+    blockchain = Blockchain(genesis)
+
+    block1 = Block(genesis.hash, "agent0", [])
+    block2 = Block(block1.hash, "agent0", [])
+    block3 = Block(block2.hash, "agent0", [])
+    block4 = Block("uknown hash", "agent0", [])
+
+    assert blockchain.add_block(block1) == tuple([True, [], [block1]])
+    assert blockchain.head == block1
+    assert blockchain.get_block(block1.hash).height == 1
+
+    assert blockchain.add_block(block2) == tuple([True, [], [block2]])
+    assert blockchain.head == block2
+    assert blockchain.get_block(block2.hash).height == 2
+
+    assert blockchain.add_block(block3) == tuple([True, [], [block3]])
+    assert blockchain.head == block3
+    assert blockchain.get_block(block3.hash).height == 3
+
+    assert blockchain.add_block(block4) == tuple([False, [], []])
+    assert blockchain.head == block3
+
+    assert not blockchain.mark_invalid(block4)
+    assert blockchain.mark_invalid(block2)
+
+    assert blockchain.find_new_head() == block1

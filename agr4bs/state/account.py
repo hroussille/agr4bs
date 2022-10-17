@@ -116,12 +116,4 @@ class Account:
         """
             Copy the current Account
         """
-        save_internal_agent = self.internal_agent
-        self._internal_agent = None
-
-        copy = pickle.loads(pickle.dumps(self))
-        copy._internal_agent = save_internal_agent
-
-        self._internal_agent = save_internal_agent
-
-        return copy
+        return pickle.loads(pickle.dumps(self))

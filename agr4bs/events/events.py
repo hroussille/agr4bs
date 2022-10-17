@@ -33,8 +33,11 @@ DROP_OUTBOUND_PEER = "drop_outbound_peer"
 # Block events
 CREATE_BLOCK = "create_block"
 RECEIVE_BLOCK = "receive_block"
+RECEIVE_BLOCK_HEADER = "receive_block_header"
 REQUEST_BLOCK = "request_block"
-RECEIVE_REQUEST_BLOCKS = "receive_request_block"
+REQUEST_BLOCK_HEADER = "request_block_header"
+RECEIVE_REQUEST_BLOCKS = "receive_request_blocks"
+RECEIVE_REQUEST_BLOCKS_HEADERS = "receive_request_blocks_header"
 
 # Block endorsement events
 REQUEST_BLOCK_ENDORSEMENT = "request_block_endorsement"

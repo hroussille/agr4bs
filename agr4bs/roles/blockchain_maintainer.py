@@ -16,6 +16,8 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 - append_block
 """
 
+from agr4bs.blockchain.block import BlockHeader
+from agr4bs.events.events import RECEIVE_BLOCK_HEADER
 from agr4bs.state.account import Account
 from agr4bs.state.state_change import AddBalance, CreateAccount, RemoveBalance
 from ..agents import ExternalAgent, Context, ContextChange, AgentType
@@ -67,6 +69,11 @@ class BlockchainMaintainerContextChange(ContextChange):
         genesis: Block = context['genesis']
 
         return factory.build_blockchain(genesis)
+
+    @staticmethod
+    def init_headerchain(context: Context):
+        """
+        """
 
     @staticmethod
     def init_state(context: Context):
@@ -209,10 +216,6 @@ class BlockchainMaintainer(Role):
         if block.compute_hash() != block.hash:
             return False
 
-        for tx in block.transactions:
-            if agent.validate_transaction(tx) is False:
-                return False
-
         return True
 
     @staticmethod
@@ -245,6 +248,9 @@ class BlockchainMaintainer(Role):
             :returns: wether the block was appended or not
             :rtype: bool
         """
+
+        # TODO: handle reorgs on invalid blocks
+
         if agent.validate_block(block):
             res, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(
                 block)
@@ -252,16 +258,38 @@ class BlockchainMaintainer(Role):
             if res is False:
                 agent.context['invalid_count'] += 1
 
-            for reverted_block in reverted_blocks:
-                agent.reverse_block(reverted_block)
-                agent.context['blocks_reverted'] += 1
+            ## Only reorg if the head changed
+            else:
+                agent.reorg(reverted_blocks, added_blocks)
 
-            for added_block in added_blocks:
-                agent.execute_block(added_block)
-
-            return res
+            return True
 
         return False
+
+    @staticmethod
+    @export
+    def reorg(agent: ExternalAgent, reverted_blocks: list[Block], added_blocks: list[Block]):
+
+        """
+            Process a chain reorg by doing to adequate revert / execute
+        """
+
+        for reverted_block in reverted_blocks:
+            agent.reverse_block(reverted_block)
+            agent.context['blocks_reverted'] += 1
+
+        for added_block in added_blocks:
+         
+            # An invalid block was found during the reorg :
+            # - invalidate the block and all its successors
+            # - compute new candidate head
+            # - reorg to the new head
+            if not agent.execute_block(added_block):
+                if agent.context["blockchain"].mark_invalid(added_block):
+                    previous_head = agent.context["blockchain"].get_block(added_block.parent_hash)
+                    new_head = agent.context["blockchain"].find_new_head()
+                    to_revert, to_add = agent.context["blockchain"].find_path(previous_head, new_head)
+                    agent.reorg(to_revert, to_add)
 
     @staticmethod
     @export
@@ -274,7 +302,17 @@ class BlockchainMaintainer(Role):
             :rtype: bool
         """
 
-        for tx in block.transactions:
+        for index, tx in enumerate(block.transactions):
+
+            if agent.validate_transaction(tx) is False:
+
+                # An invalid tx was found while executing the block
+                # Revert all the previous ones from the same block
+                while index > 0:
+                    agent.revert_transaction(block.transactions[index - 1])
+
+                return False
+
             agent.execute_transaction(tx)
 
         if agent.context['state'].get_account(block.creator) is None:
@@ -283,6 +321,7 @@ class BlockchainMaintainer(Role):
             change = AddBalance(block.creator, 10)
 
         agent.context["state"].apply_state_change(change)
+        agent.context["blockchain"].head = block
 
         return True
 
@@ -297,8 +336,7 @@ class BlockchainMaintainer(Role):
             :rtype: bool
         """
 
-        agent.context["state"].apply_state_change(
-            RemoveBalance(block.creator, 10))
+        agent.context["state"].apply_state_change(RemoveBalance(block.creator, 10))
 
         for tx in reversed(block.transactions):
             # Reverse the transaction state changes
@@ -309,6 +347,9 @@ class BlockchainMaintainer(Role):
 
             # Delete the Receipt entry
             del agent.context['receipts'][tx.hash]
+
+        new_head = agent.context['blockchain'].get_block(block.parent_hash)
+        agent.context["blockchain"] = new_head
 
     @staticmethod
     @export
@@ -323,8 +364,7 @@ class BlockchainMaintainer(Role):
         if tx.hash in agent.context['receipts']:
             raise ValueError("Executing an already seen transaction.")
 
-        receipt = agent.context['vm'].process_tx(
-            agent.context["state"].copy(), tx)
+        receipt = agent.context['vm'].process_tx(agent.context["state"].copy(), tx)
         agent.context["state"].apply_batch_state_change(receipt.state_changes)
         agent.context["receipts"][tx.hash] = receipt
 

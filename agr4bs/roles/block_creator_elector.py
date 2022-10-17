@@ -47,8 +47,8 @@ class BlockCreatorElector(Role):
             This is a system event simulating a normal election process
             such as PoW or PoS potentially leading to a block proposal.
         """
-        #selected = random.choice(agent.agents_names)
-        selected = agent.agents_names[0]
+        selected = random.choice(agent.agents_names)
+        #selected = agent.agents_names[0]
         #selected = random.sample(agent.agents_names, 2)
         #selected = random.sample(agent.agents_names, random.randint(1, 2))
         agent.send_system_message(CreateBlock(agent.name), selected)

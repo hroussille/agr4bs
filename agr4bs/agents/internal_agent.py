@@ -3,6 +3,7 @@
 """
 from typing import Callable
 from deepdiff import DeepDiff, Delta
+from agr4bs.state.account import Account
 from agr4bs.state.state_change import UpdateAccountStorage
 from ..common import Serializable
 from .agent import Agent, AgentType
@@ -203,6 +204,72 @@ class InternalAgent(Agent):
     def set_storage_at(self, key: str, value: any):
         self.account.set_storage_at(key, value)
 
+    def call(self, to: str, calldata: InternalAgentCalldata, value: int = 0) -> InternalAgentResponse:
+
+        account = self.ctx.state.get_account(self.ctx.to)
+        new_context = self.ctx.vm.get_next_context(
+            self.ctx, account.name, to, value)
+
+        if account.storage != self.account.storage:
+            change = self._get_account_changes(account, self.account)
+            new_context.state.apply_state_change(change)
+
+        response = self.ctx.vm.call(calldata, new_context)
+
+        if response.reverted is False:
+            self.ctx.merge_changes(new_context.changes)
+            self.ctx.state.apply_batch_state_change(new_context.changes)
+
+        return response
+
+    def deploy(self, deployement: InternalAgentDeployement, value: int = 0) -> InternalAgentResponse:
+        account = self.ctx.state.get_account(self.ctx.to)
+        new_context = self.ctx.vm.get_next_context(
+            self.ctx, account.name, None, value)
+
+        if account.storage != self.account.storage:
+            change = self._get_account_changes(account, self.account)
+            new_context.state.apply_state_change(change)
+
+        response = self.ctx.vm.deploy(deployement, new_context)
+
+        if response.reverted is False:
+            self.ctx.merge_changes(new_context.changes)
+            self.ctx.state.apply_batch_state_change(new_context.changes)
+
+        return response
+
+    def transfer(self, to: str, value: int) -> InternalAgentResponse:
+
+        new_context = self.ctx.vm.get_next_context(
+            self.ctx, self.account.name, to, value)
+
+        response = self.ctx.vm.transfer(new_context)
+
+        if response.reverted is False:
+            self.ctx.merge_changes(new_context.changes)
+            self.ctx.state.apply_batch_state_change(new_context.changes)
+
+        return response
+
+    def tx_origin(self) -> str:
+        return self.ctx.origin
+
+    def caller(self) -> str:
+        return self.ctx.caller 
+
+    def value(self) -> str:
+        return self.ctx.value
+
+    def _get_account_changes(self, previous: Account, current: Account):
+
+        if previous.storage != current.storage:
+            delta_apply = Delta(DeepDiff(previous.storage, current.storage))
+            delta_revert = Delta(DeepDiff(current.storage, previous.storage))
+            return UpdateAccountStorage(self.name, delta_apply, delta_revert)
+
+        return None
+
     def entry_point(self, calldata: InternalAgentCalldata, ctx: 'ExecutionContext') -> InternalAgentResponse:
         """
             The entry point of the InternalAgent, this method is the only method invoked by
@@ -228,14 +295,10 @@ class InternalAgent(Agent):
                 raise ValueError("Constructor already called")
 
         response = getattr(self, calldata.function)(**calldata.parameters)
+        change = self._get_account_changes(previous_account, self.account)
 
-        if previous_account.storage != self.account.storage:
-            delta_apply = Delta(
-                DeepDiff(previous_account.storage, self.account.storage))
-            delta_revert = Delta(
-                DeepDiff(self.account.storage, previous_account.storage))
-            self.ctx.changes.append(UpdateAccountStorage(
-                self.name, delta_apply, delta_revert))
+        if change is not None:
+            self.ctx.changes.append(change)
 
         self.ctx = previous_ctx
         self.account = previous_account
