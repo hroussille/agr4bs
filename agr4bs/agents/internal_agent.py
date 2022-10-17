@@ -252,6 +252,15 @@ class InternalAgent(Agent):
 
         return response
 
+    def tx_origin(self) -> str:
+        return self.ctx.origin
+
+    def caller(self) -> str:
+        return self.ctx.caller 
+
+    def value(self) -> str:
+        return self.ctx.value
+
     def _get_account_changes(self, previous: Account, current: Account):
 
         if previous.storage != current.storage:

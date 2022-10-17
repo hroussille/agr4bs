@@ -13,7 +13,6 @@ from ..agents import InternalAgent, InternalAgentCalldata, InternalAgentResponse
 
 DEPTH_LIMIT = 32
 
-
 class TransactionType(Enum):
     """
         Valid transaction types

@@ -5,10 +5,18 @@
 
 import hashlib
 import pickle
-
 from ..common import Serializable
 from .transaction import Transaction
 
+class BlockHeader(Serializable):
+
+    """
+        Block Header class implementation
+    """
+    def __init__(self,  parent_hash: str, creator: str, hash: str) -> None:
+        self._creator = creator
+        self._parent_hash = parent_hash
+        self._hash = hash
 
 class Block(Serializable):
 
@@ -30,7 +38,16 @@ class Block(Serializable):
         self._total_fees = sum(map(lambda tx: tx.fee, self._transactions))
         self._height = 0
         self._hash = self.compute_hash()
+        self._invalid = False
 
+
+    @property
+    def header(self) -> BlockHeader:
+        """
+            Get the header of the block
+        """
+        return BlockHeader(self._parent_hash, self._creator, self._hash)
+        
     @property
     def parent_hash(self) -> "str":
         """ Get the hash of the parent Block
@@ -103,6 +120,19 @@ class Block(Serializable):
             raise ValueError("Block height cannot be negative")
 
         self._height = new_height
+
+    @property
+    def invalid(self) -> bool:
+
+        """
+            Get the invalid status of a block
+        """
+
+        return self._invalid
+    
+    @invalid.setter
+    def invalid(self, invalid: bool) -> None:
+        self._invalid = invalid
 
     def compute_hash(self) -> str:
         """ Computes the hash of the Block
