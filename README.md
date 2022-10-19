@@ -8,3 +8,25 @@ AGR4BS python class definitions to serve as a framework for concrete blockchain 
 [![GitHub Super-Linter](https://github.com/hroussille/agr4bs/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/marketplace/actions/super-linter)
 
 :warning: **This repository is under heavy development and will undergo breaking changes** :warning: 
+
+## Installation
+
+### Clone the repository 
+
+```sh
+    git clone https://github.com/hroussille/agr4bs/tree/development
+```
+
+### Install the dependencies
+
+```sh
+    cd agr4bs
+    git checkout development
+    pip install -r requirements.txt
+```
+
+## Test suite
+
+```sh
+    python -m pytests 
+```
