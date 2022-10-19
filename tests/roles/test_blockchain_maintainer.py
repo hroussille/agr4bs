@@ -85,3 +85,145 @@ def test_blockchain_maintainer_removal():
 
     for context_change in role.context_change().mount():
         assert context_change not in agent.context
+
+
+def test_blockchain_maintainer_valid_reorg():
+    """
+    Ensures that blockchain maintainer handles reorgs on valid blocks correctly
+    """
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+
+    #
+    #          / block_1 -> block_2
+    #  genesis
+    #          \ block_3 -> block_4 -> block_5
+    #
+
+    block_1 = agr4bs.Block(genesis.hash, "agent_0", [])
+    block_2 = agr4bs.Block(block_1.hash, "agent_0", [])
+
+    block_3 = agr4bs.Block(genesis.hash, "agent_0", [])
+    block_4 = agr4bs.Block(block_3.hash, "agent_0", [])
+    block_5 = agr4bs.Block(block_4.hash, "agent_0", [])
+
+    agent.receive_block(block_1)
+    agent.receive_block(block_2)
+
+    assert agent.context["blockchain"].head == block_2
+
+    agent.receive_block(block_3)
+    agent.receive_block(block_4)
+    agent.receive_block(block_5)
+
+    assert agent.context["blockchain"].head == block_5
+
+    assert not agent.context["blockchain"].is_block_on_main_chain(block_2)
+
+def test_blockchain_maintainer_invalid_reorg():
+    """
+    Ensures that blockchain maintainer handles reorgs on valid blocks correctly
+    """
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+
+    #
+    #          / block_1 -> block_2
+    #  genesis
+    #          \ block_3 -> block_4 -> block_5 -> block_6 (INVALID)
+    #
+
+    invalid_tx = agr4bs.Transaction("invalid", "invalid", 0, 0, 1);
+
+    block_1 = agr4bs.Block(genesis.hash, "agent_0", [])
+    block_2 = agr4bs.Block(block_1.hash, "agent_0", [])
+
+    block_3 = agr4bs.Block(genesis.hash, "agent_0", [])
+    block_4 = agr4bs.Block(block_3.hash, "agent_0", [])
+    block_5 = agr4bs.Block(block_4.hash, "agent_0", [])
+    block_6 = agr4bs.Block(block_5.hash, "agent_0", [invalid_tx])
+
+    agent.receive_block(block_1)
+    agent.receive_block(block_2)
+
+    assert agent.context["blockchain"].head == block_2
+
+    agent.receive_block(block_3)
+    agent.receive_block(block_4)
+    agent.receive_block(block_5)
+    agent.receive_block(block_6)
+
+    assert agent.context["blockchain"].head == block_5
+
+    assert not agent.context["blockchain"].is_block_on_main_chain(block_2)
+    assert not agent.context["blockchain"].is_block_on_main_chain(block_6)
+    assert agent.context["blockchain"].get_block(block_6.hash).invalid
+    assert agent.context["state"].get_account_balance("agent_0") == 30
+
+
+def test_blockchain_maintainer_delayed_invalid_reorg():
+
+    """
+    Ensures that blockchain maintainer handles reorgs on valid blocks correctly
+    """
+    
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+
+    #
+    #          / block_1 -> block_2
+    #  genesis
+    #          \ block_3 -> block_4 -> block_5 -> block_6 (INVALID) -> block_7
+    #
+
+    invalid_tx = agr4bs.Transaction("invalid", "invalid", 0, 0, 1);
+    valid_tx = agr4bs.Transaction("agent_0", "agent_1", 0, 0, 10)
+
+    block_1 = agr4bs.Block(genesis.hash, "agent_0", [])
+    block_2 = agr4bs.Block(block_1.hash, "agent_0", [])
+
+    block_3 = agr4bs.Block(genesis.hash, "agent_0", [])
+    block_4 = agr4bs.Block(block_3.hash, "agent_0", [])
+    block_5 = agr4bs.Block(block_4.hash, "agent_0", [])
+    block_6 = agr4bs.Block(block_5.hash, "agent_0", [valid_tx, invalid_tx])
+    block_7 = agr4bs.Block(block_6.hash, "agent_0", [])
+
+    print("genesis : ", genesis.hash)
+    print("block_1 : ", block_1.hash)
+    print("block_2 : ", block_2.hash)
+    print("block_3 : ", block_3.hash)
+    print("block_4 : ", block_4.hash)
+    print("block_5 : ", block_5.hash)
+    print("block_6 : ", block_6.hash)
+    print("block_7 : ", block_7.hash)
+
+    agent.receive_block(block_1)
+    agent.receive_block(block_2)
+
+    assert agent.context["blockchain"].head == block_2
+
+    agent.receive_block(block_3)
+    agent.receive_block(block_4)
+    agent.receive_block(block_5)
+    agent.receive_block(block_7)
+    agent.receive_block(block_6)
+
+    assert agent.context["blockchain"].head == block_5
+
+    main_chain = agent.context["blockchain"].get_chain()
+    
+    for block in main_chain:
+        print(block.hash)
+
+    assert not agent.context["blockchain"].is_block_on_main_chain(block_2)
+    assert not agent.context["blockchain"].is_block_on_main_chain(block_6)
+    assert agent.context["blockchain"].get_block(block_6.hash).invalid
+
+    print(agent.context["state"].get_account_balance("agent_0"))
+    print(agent.context["state"].get_account_balance("agent_1"))

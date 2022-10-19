@@ -23,7 +23,7 @@ class Blockchain():
 
         genesis.compute_hash()
         self._genesis = genesis
-        self._blocks = {}
+        self._blocks = defaultdict(lambda: None)
         self._staging_blocks = defaultdict(lambda: [])
         self._blocks[genesis.hash] = genesis
         self._children = defaultdict(lambda: [])
@@ -191,15 +191,18 @@ class Blockchain():
         """
         path = deque()
 
+        print("Looking for path between : " , child.hash , " and ", parent.hash)
+
         if include_child is True:
             path.appendleft(child)
 
-        while child.parent_hash != parent.hash and child.parent_hash is not None:
-            child = self._blocks[child.parent_hash]
-            path.appendleft(self._blocks[child.hash])
+        if child.hash != parent.hash:
+            while child.parent_hash != parent.hash and child.parent_hash is not None:
+                child = self._blocks[child.parent_hash]
+                path.appendleft(self._blocks[child.hash])
 
-        if child.parent_hash != parent.hash:
-            raise ValueError("Not path between blocks")
+            if child.parent_hash != parent.hash:
+                raise ValueError("Not path between blocks")
 
         if include_parent:
             path.appendleft(parent)
@@ -281,7 +284,7 @@ class Blockchain():
 
     def find_path(self, block_a: Block, block_b: Block) -> tuple[list[Block], list[Block]]:
         """
-            Find a parth from block_a to block_b in the chain
+            Find a path from block_a to block_b in the chain
         """
         common_ancestor = self.find_common_ancestor(block_a, block_b)
         reverted_blocks = self.get_subchain(block_a, common_ancestor)

@@ -13,6 +13,7 @@ class BlockHeader(Serializable):
     """
         Block Header class implementation
     """
+
     def __init__(self,  parent_hash: str, creator: str, hash: str) -> None:
         self._creator = creator
         self._parent_hash = parent_hash
@@ -27,6 +28,8 @@ class Block(Serializable):
         included in a Blockchain.
     """
 
+    _nonce = 0
+
     def __init__(self, parent_hash: str, creator: str, transactions: list[Transaction] = None) -> None:
         self._parent_hash = parent_hash
 
@@ -37,6 +40,10 @@ class Block(Serializable):
         self._creator = creator
         self._total_fees = sum(map(lambda tx: tx.fee, self._transactions))
         self._height = 0
+
+        self._number = Block._nonce
+        Block._nonce = Block._nonce + 1
+
         self._hash = self.compute_hash()
         self._invalid = False
 
@@ -141,7 +148,7 @@ class Block(Serializable):
             :rtype: str
         """
 
-        hash_dict = {'parent_hash': self._parent_hash, 'creator': self._creator,
+        hash_dict = {'number': self._number, 'parent_hash': self._parent_hash, 'creator': self._creator,
                      'total_fees': self._total_fees, 'transactions': list(map(lambda tx: tx.compute_hash(), self._transactions))}
 
         return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()

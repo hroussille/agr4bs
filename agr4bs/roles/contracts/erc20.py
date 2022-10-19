@@ -34,7 +34,7 @@ class ERC20(Role):
         agent.set_storage_at("balances", DefaultDict(lambda: 0))
         agent.set_storage_at("allowances", DefaultDict(lambda: DefaultDict(lambda: 0)))
         return Success()
-    
+
     @staticmethod
     @export
     def decimals(agent: InternalAgent) -> InternalAgentResponse:
