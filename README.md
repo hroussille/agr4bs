@@ -11,6 +11,11 @@ AGR4BS python class definitions to serve as a framework for concrete blockchain 
 
 ## Installation
 
+### Prerequisites
+
+- git
+- python 3
+  
 ### Clone the repository 
 
 ```sh
