@@ -286,22 +286,14 @@ class BlockchainMaintainer(Role):
             # - reorg to the new head
             if not agent.execute_block(added_block):
                 if agent.context["blockchain"].mark_invalid(added_block):
-
-                    print("DEEP REORG FOR BLOCK : " , added_block.hash)
                     previous_head = agent.context["blockchain"].get_block(added_block.parent_hash)
                     new_head = agent.context["blockchain"].find_new_head()
 
                     if previous_head.hash != new_head.hash:
                         to_revert, to_add = agent.context["blockchain"].find_path(previous_head, new_head)
-
-                        print("DEEP REORG REVERT : ", [block.hash for block in to_revert])
-                        print("DEEP REORG APPLY : ", [block.hash for block in to_add])
-
                         agent.reorg(to_revert, to_add)
 
                     else:
-                        print("Setting head on : ", previous_head.hash)
-                        print("Invalid : ", previous_head.invalid)
                         agent.context["blockchain"].head = previous_head
 
                     return
@@ -317,8 +309,6 @@ class BlockchainMaintainer(Role):
             :rtype: bool
         """
 
-        print("EXECUTING BLOCK : " , block.hash)
-
         for index, tx in enumerate(block.transactions):
 
             if agent.validate_transaction(tx) is False:
@@ -326,7 +316,6 @@ class BlockchainMaintainer(Role):
                 # An invalid tx was found while executing the block
                 # Revert all the previous ones from the same block
                 while index > 0:
-                    print("REVERTING TRANSACTION : ", index - 1)
                     agent.reverse_transaction(block.transactions[index - 1])
                     index = index - 1
 
@@ -340,8 +329,6 @@ class BlockchainMaintainer(Role):
             change = AddBalance(block.creator, 10)
 
         agent.context["state"].apply_state_change(change)
-
-        print("EXECUTE SETTING HEAD ON : ", block.hash)
         agent.context["blockchain"].head = block
 
         return True

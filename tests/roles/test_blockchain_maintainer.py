@@ -194,15 +194,6 @@ def test_blockchain_maintainer_delayed_invalid_reorg():
     block_6 = agr4bs.Block(block_5.hash, "agent_0", [valid_tx, invalid_tx])
     block_7 = agr4bs.Block(block_6.hash, "agent_0", [])
 
-    print("genesis : ", genesis.hash)
-    print("block_1 : ", block_1.hash)
-    print("block_2 : ", block_2.hash)
-    print("block_3 : ", block_3.hash)
-    print("block_4 : ", block_4.hash)
-    print("block_5 : ", block_5.hash)
-    print("block_6 : ", block_6.hash)
-    print("block_7 : ", block_7.hash)
-
     agent.receive_block(block_1)
     agent.receive_block(block_2)
 
@@ -216,14 +207,6 @@ def test_blockchain_maintainer_delayed_invalid_reorg():
 
     assert agent.context["blockchain"].head == block_5
 
-    main_chain = agent.context["blockchain"].get_chain()
-    
-    for block in main_chain:
-        print(block.hash)
-
     assert not agent.context["blockchain"].is_block_on_main_chain(block_2)
     assert not agent.context["blockchain"].is_block_on_main_chain(block_6)
     assert agent.context["blockchain"].get_block(block_6.hash).invalid
-
-    print(agent.context["state"].get_account_balance("agent_0"))
-    print(agent.context["state"].get_account_balance("agent_1"))

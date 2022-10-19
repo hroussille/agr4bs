@@ -191,8 +191,6 @@ class Blockchain():
         """
         path = deque()
 
-        print("Looking for path between : " , child.hash , " and ", parent.hash)
-
         if include_child is True:
             path.appendleft(child)
 
@@ -375,7 +373,6 @@ class Blockchain():
             if added_block.hash not in self._blocks:
                 if self.add_block_strict(added_block) is not True:
                     raise ValueError("Chain is corrupted.")
-
 
         if self._head == previous_head:
             return (True, [], [])

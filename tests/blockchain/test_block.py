@@ -43,7 +43,7 @@ def test_block_hash():
     """
     tx = Transaction("agent0", "agent1", 0, value=1000, fee=1)
     block = Block("genesis", "agent0", [tx])
-    assert block.hash == "752a16a03f3b7c6908e7863bb6c917585f176876713035807243204cb9920adf"
+    assert block.hash == "8b66de896173b02ba9d7caba081b04c5a42b7544ff7040896b44851bcae14b53"
 
 
 def test_block_serialization():
