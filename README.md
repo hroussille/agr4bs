@@ -19,7 +19,7 @@ AGR4BS python class definitions to serve as a framework for concrete blockchain 
 ### Clone the repository 
 
 ```sh
-    git clone https://github.com/hroussille/agr4bs/tree/development
+    git clone git@github.com:hroussille/agr4bs.git
 ```
 
 ### Install the dependencies
@@ -33,5 +33,5 @@ AGR4BS python class definitions to serve as a framework for concrete blockchain 
 ## Test suite
 
 ```sh
-    python -m pytests 
+    python -m pytest -s
 ```
