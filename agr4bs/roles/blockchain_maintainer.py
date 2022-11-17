@@ -15,9 +15,8 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 - execute_transaction
 - append_block
 """
-
-from agr4bs.blockchain.block import BlockHeader
-from agr4bs.events.events import RECEIVE_BLOCK_HEADER
+from queue import PriorityQueue
+from agr4bs.events.events import INIT
 from agr4bs.state.account import Account
 from agr4bs.state.state_change import AddBalance, CreateAccount, RemoveBalance
 from ..agents import ExternalAgent, Context, ContextChange, AgentType
@@ -28,7 +27,7 @@ from ..roles.role import Role, RoleType
 from ..common import on, export
 from ..blockchain import Block, Transaction
 from ..factory import Factory
-from ..network.messages import DiffuseBlock
+from ..network.messages import DiffuseBlock, DiffuseTransaction
 
 
 class BlockchainMaintainerContextChange(ContextChange):
@@ -42,14 +41,13 @@ class BlockchainMaintainerContextChange(ContextChange):
     def __init__(self) -> None:
 
         self.receipts: dict[Receipt] = {}
-        self.tx_pool: dict[Transaction] = {}
-        self.tx_queue: dict[Transaction] = {}
+
+        # tx_pool holds transactions ready to be processed
+        self.tx_pool: dict[dict[Transaction]] = {}
+
         self.vm = self.init_vm
         self.blockchain = self.init_blockchain
         self.state = self.init_state
-        self.blocks_received = 0
-        self.blocks_reverted = 0
-        self.invalid_count = 0
 
     @staticmethod
     def init_vm(context: Context):
@@ -71,25 +69,13 @@ class BlockchainMaintainerContextChange(ContextChange):
         return factory.build_blockchain(genesis)
 
     @staticmethod
-    def init_headerchain(context: Context):
-        """
-        """
-
-    @staticmethod
     def init_state(context: Context):
         """
             Initialize the state
         """
         factory: Factory = context['factory']
-        genesis: Block = context['genesis']
-        vm: VM = context['vm']
 
         state: State = factory.build_state()
-
-        for tx in genesis.transactions:
-            changes = vm.process_tx(tx)
-            state.apply_batch_state_change(changes)
-
         return state
 
 
@@ -123,8 +109,18 @@ class BlockchainMaintainer(Role):
 
     @staticmethod
     @export
+    @on(INIT)
+    def process_genesis(agent: ExternalAgent):
+
+        genesis = agent.context['blockchain'].genesis
+
+        for tx in genesis.transactions:
+            agent.execute_transaction(tx)
+
+    @staticmethod
+    @export
     @on(RECEIVE_TRANSACTION)
-    def receive_transactiom(agent: ExternalAgent, tx: Transaction):
+    def receive_transaction(agent: ExternalAgent, tx: Transaction):
         """
             Behavior called on a RECEIVE_TRANSACTIOn event
             It is responsible for validating the transaction and storing it
@@ -133,16 +129,22 @@ class BlockchainMaintainer(Role):
 
         tx_hash = tx.compute_hash()
 
-        # Transaction is already known
-        if tx_hash in agent.context['txpool'] or tx_hash in agent.context['receipts']:
-            return
+        # Invalid tx hashes are not added nor propagated
+        if tx.hash != tx_hash:
+            return False
 
         # Skip invalid transactions
-        if agent.validate_transaction(tx) is False:
-            return
+        if agent.validate_new_transaction(tx) is False:
+            return False
 
         # Record transactions in the mempool
         agent.store_transaction(tx)
+
+        # Diffuse the transaction to the outbound peers
+        outbound_peers = list(agent.context['outbound_peers'])
+        agent.send_message(DiffuseTransaction(agent.name, tx), outbound_peers)
+
+        return True
 
     @staticmethod
     @export
@@ -156,8 +158,6 @@ class BlockchainMaintainer(Role):
 
         block_hash = block.compute_hash()
 
-        agent.context['blocks_received'] += 1
-
         # Block is already known
         if agent.context['blockchain'].get_block(block_hash):
             return
@@ -168,13 +168,14 @@ class BlockchainMaintainer(Role):
 
         agent.append_block(block)
 
+        # Diffuse the block to the outbound peers
         outbound_peers = list(agent.context['outbound_peers'])
         agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)
 
     @staticmethod
     @export
     def validate_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
-        """ Validate a specific transaction
+        """ Validate a transaction to execute
 
             :param agent: the agent on which the behavior operates
             :type agent: ExternalAgent
@@ -202,6 +203,44 @@ class BlockchainMaintainer(Role):
 
     @staticmethod
     @export
+    def validate_new_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
+        """ Validate a newly received transaction specific transaction
+
+            :param agent: the agent on which the behavior operates
+            :type agent: ExternalAgent
+            :param transaction: the transaction to validate
+            :type transaction: Transaction
+            :returns: wether the transaction is valid or not
+            :rtype: bool
+        """
+        sender_account = agent.context['state'].get_account(tx.origin)
+
+        if tx.hash in agent.context['receipts']:
+            return False
+
+        if sender_account is None:
+            return False
+
+        if sender_account.nonce > tx.nonce:
+            return False
+
+        # This special case may save a network diffuse on invalid tx with correct nonce
+        if sender_account.nonce == tx.nonce:
+            if sender_account.balance < tx.value + tx.fee:
+                return False
+
+        # Replacement is only allowed if the replacement fee is higher than the existing one
+        # TODO: make this a configurable input later on
+        if tx.origin in agent.context['tx_pool'] and tx.nonce in agent.context['tx_pool'][tx.origin]:
+            exising_tx = agent.context['tx_pool'][tx.origin][tx.nonce]
+            if (tx.fee <= exising_tx.fee):
+                return False
+        
+        return True
+
+
+    @staticmethod
+    @export
     def validate_block(agent: ExternalAgent, block: Block) -> bool:
         """ Validate a specific Block
 
@@ -220,8 +259,26 @@ class BlockchainMaintainer(Role):
 
     @staticmethod
     @export
+    def get_pending_transactions(agent: ExternalAgent) -> dict[list[Transaction]]:
+        pending_transactions_by_account = {}
+
+        for account in agent.context['tx_pool']:
+            account_nonce = agent.context['state'].get_account_nonce(account)
+
+            if account_nonce in agent.context['tx_pool'][account]:
+                nonce = account_nonce
+                pending_transactions_by_account[account] = []
+
+                while nonce in agent.context['tx_pool'][account]:
+                    pending_transactions_by_account[account].append(agent.context['tx_pool'][account][nonce])
+                    nonce = nonce + 1
+
+        return pending_transactions_by_account
+
+    @staticmethod
+    @export
     def store_transaction(agent: ExternalAgent, tx: Transaction) -> bool:
-        """ Store a specific transaction
+        """ Store a specific transaction from the transaction pool
 
             :param agent: the agent on which the behavior operates
             :type agent: ExternalAgent
@@ -230,12 +287,34 @@ class BlockchainMaintainer(Role):
             :returns: wether the transaction was stored or not
             :rtype: bool
         """
-        if tx.hash in agent.tx_pool:
-            return False
 
-        agent.context["tx_pool"][tx.hash] = tx
-        return True
+        # The sender is not known create entires in the tx_pool
+        if tx.origin not in agent.context['tx_pool']:
+            agent.context['tx_pool'][tx.origin] = {}
 
+        agent.context['tx_pool'][tx.origin][tx.nonce] = tx;
+
+    @staticmethod
+    @export
+    def discard_transaction(agent: ExternalAgent, tx: Transaction):
+        """
+            discard a specific transaction from the transaction pool
+
+            :param agent: the agent on which the behavior operates
+            :type agent: ExternalAgent
+            :param transaction: the transaction to discard
+            :type transaction: Transaction
+        """
+
+        # The transaction may be unknown if it was received in a foreign block
+        if tx.origin in agent.context['tx_pool'] and tx.nonce in agent.context['tx_pool'][tx.origin]:
+            del agent.context['tx_pool'][tx.origin][tx.nonce]
+
+            # Cleanup the tx_pool when an account has no pending or queued transactions
+            if len(agent.context['tx_pool'][tx.origin]) == 0:
+                del agent.context['tx_pool'][tx.origin]
+
+    
     @staticmethod
     @export
     def append_block(agent: ExternalAgent, block: Block) -> bool:
@@ -248,18 +327,11 @@ class BlockchainMaintainer(Role):
             :returns: wether the block was appended or not
             :rtype: bool
         """
-
-        # TODO: handle reorgs on invalid blocks
-
         if agent.validate_block(block):
-            res, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(
-                block)
+            head_changed, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(block)
 
-            if res is False:
-                agent.context['invalid_count'] += 1
-
-            ## Only reorg if the head changed
-            else:
+            # Only reorg if the head changed
+            if head_changed:
                 agent.reorg(reverted_blocks, added_blocks)
 
             return True
@@ -269,17 +341,15 @@ class BlockchainMaintainer(Role):
     @staticmethod
     @export
     def reorg(agent: ExternalAgent, reverted_blocks: list[Block], added_blocks: list[Block]):
-
         """
-            Process a chain reorg by doing to adequate revert / execute
+            Process a chain reorg by doing the adequate revert / execute
         """
 
         for reverted_block in reverted_blocks:
             agent.reverse_block(reverted_block)
-            agent.context['blocks_reverted'] += 1
 
         for added_block in added_blocks:
-         
+
             # An invalid block was found during the reorg :
             # - invalidate the block and all its successors
             # - compute new candidate head
@@ -317,11 +387,13 @@ class BlockchainMaintainer(Role):
                 # Revert all the previous ones from the same block
                 while index > 0:
                     agent.reverse_transaction(block.transactions[index - 1])
+                    agent.store_transaction(block.transactions[index - 1])
                     index = index - 1
 
                 return False
 
             agent.execute_transaction(tx)
+            agent.discard_transaction(tx)
 
         if agent.context['state'].get_account(block.creator) is None:
             change = CreateAccount(Account(block.creator, 10))
@@ -344,14 +416,13 @@ class BlockchainMaintainer(Role):
             :rtype: bool
         """
 
-        agent.context["state"].apply_state_change(RemoveBalance(block.creator, 10))
+        agent.context["state"].apply_state_change(
+            RemoveBalance(block.creator, 10))
 
         for tx in reversed(block.transactions):
-            # Reverse the transaction state changes
-            agent.reverse_transaction(tx)
 
-            # Push the tx back onto the txpool
-            # agent.txpool[tx.hash] = tx
+            # Reverse the transaction
+            agent.reverse_transaction(tx)
 
             # Delete the Receipt entry
             del agent.context['receipts'][tx.hash]

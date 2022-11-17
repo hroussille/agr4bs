@@ -267,15 +267,12 @@ def test_internal_agent_entry_point_valid_multi_parameters():
 
     internal_agent = InternalAgent("internal_agent_0")
     internal_agent.add_role(CustomInternalAgentRole())
-    calldata = agr4bs.InternalAgentCalldata(
-        "custom_multi_parameter_function", counter_1=1, counter_2=2)
+    calldata = agr4bs.InternalAgentCalldata("custom_multi_parameter_function", counter_1=1, counter_2=2)
     state = agr4bs.State()
     account = Account(internal_agent.name, internal_agent=internal_agent)
     state.apply_state_change(CreateAccount(account))
 
-    context = ExecutionContext(
-        "origin", "from", "internal_agent_0", 0, 0, state, agr4bs.VM)
-
+    context = ExecutionContext("origin", "from", "internal_agent_0", 0, 0, state, agr4bs.VM)
     response = internal_agent.entry_point(calldata, context)
 
     assert response.reverted is False
@@ -293,15 +290,12 @@ def test_internal_agent_entry_point_valid_state_changing():
 
     internal_agent = InternalAgent("internal_agent_0")
     internal_agent.add_role(CustomInternalAgentRole())
-    calldata = agr4bs.InternalAgentCalldata(
-        "custom_state_changing_function")
+    calldata = agr4bs.InternalAgentCalldata("custom_state_changing_function")
     state = agr4bs.State()
     account = Account(internal_agent.name, internal_agent=internal_agent)
     state.apply_state_change(CreateAccount(account))
 
-    context = ExecutionContext(
-        "origin", "from", "internal_agent_0", 0, 0, state, agr4bs.VM)
-
+    context = ExecutionContext("origin", "from", "internal_agent_0", 0, 0, state, agr4bs.VM)
     response = internal_agent.entry_point(calldata, context)
 
     assert response.reverted is False
@@ -323,8 +317,7 @@ def test_internal_agent_entry_point_invalid_function():
     internal_agent.add_role(CustomInternalAgentRole())
     calldata = agr4bs.InternalAgentCalldata("invalid_function")
     state = agr4bs.State()
-    context = ExecutionContext(
-        "origin", "from", "to", 0, 0, state, agr4bs.VM())
+    context = ExecutionContext("origin", "from", "to", 0, 0, state, agr4bs.VM())
     response = internal_agent.entry_point(calldata, context)
 
     assert response.reverted is True
@@ -340,11 +333,9 @@ def test_internal_agent_entry_point_invalid_parameters():
 
     internal_agent = InternalAgent("internal_agent_0")
     internal_agent.add_role(CustomInternalAgentRole())
-    calldata = agr4bs.InternalAgentCalldata(
-        "custom_function", counter=0, invalid=False)
+    calldata = agr4bs.InternalAgentCalldata("custom_function", counter=0, invalid=False)
     state = agr4bs.State()
-    context = ExecutionContext(
-        "origin", "from", "to", 0, 0, state, agr4bs.VM())
+    context = ExecutionContext("origin", "from", "to", 0, 0, state, agr4bs.VM())
     response = internal_agent.entry_point(calldata, context)
 
     assert response.reverted is True

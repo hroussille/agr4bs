@@ -42,6 +42,7 @@ async def test_block_creation():
         delta: datetime.timedelta = environment.date - epoch
         return min(1, delta.total_seconds() / datetime.timedelta(days=1).total_seconds())
 
+    scheduler.init()
     scheduler.run(condition, progress=progress)
 
     for agent in agents:

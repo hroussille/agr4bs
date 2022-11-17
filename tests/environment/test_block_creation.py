@@ -33,7 +33,6 @@ async def test_block_creation():
 
     for agent in agents:
         env.add_agent(agent)
-
     
     epoch = datetime.datetime.utcfromtimestamp(0)
     scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
@@ -45,6 +44,7 @@ async def test_block_creation():
         delta: datetime.timedelta = environment.date - epoch
         return min(1, delta.total_seconds() / datetime.timedelta(days=1).total_seconds())
 
+    scheduler.init()
     scheduler.run(condition, progress=progress)
 
     heads = [agent.context['blockchain'].head for agent in agents]
@@ -58,7 +58,7 @@ async def test_block_creation():
         shared_percentage = 100 * head_count / len(agents)
         print("Head : " + head_hash + " shared by " + str(shared_percentage) +
               "% of the agents (height: " + str(heads_heights[head_hash]) + ")")
-        #assert head_count / len(agents) == 1
+        assert head_count / len(agents) == 1
 
     for head_hash, head_height in heads_heights.items():
         assert head_height > 1

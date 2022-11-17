@@ -29,6 +29,7 @@ async def test_run():
 
     epoch = datetime.datetime.utcfromtimestamp(0)
     scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
+    scheduler.init()
 
     def condition(environment: agr4bs.Environment) -> bool:
         return environment.date < epoch + datetime.timedelta(minutes=10)

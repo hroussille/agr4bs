@@ -2,6 +2,7 @@
     Test suite for the BlockchainMaintainer Role
 """
 
+import queue
 import agr4bs
 
 
@@ -210,3 +211,87 @@ def test_blockchain_maintainer_delayed_invalid_reorg():
     assert not agent.context["blockchain"].is_block_on_main_chain(block_2)
     assert not agent.context["blockchain"].is_block_on_main_chain(block_6)
     assert agent.context["blockchain"].get_block(block_6.hash).invalid
+
+    assert len(agent.context['tx_pool']) == 1
+    assert len(agent.context['tx_pool']['agent_0']) == 1
+    assert agent.context['tx_pool']['agent_0'][0] == valid_tx
+
+
+
+def test_blockchain_maintainer_tx_pool():
+    """
+        Ensures that the tx_pool is correctly updated and that the query for pending transactions
+        yields the expected result
+    """
+    genesis = agr4bs.Block(None, "genesis", [agr4bs.Transaction("genesis", "agent_0", 0, 0, 100)])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+    agent.process_genesis()
+
+    pending_tx = agr4bs.Transaction("agent_0", "agent_1", 0, 0, 10)
+    queued_tx = agr4bs.Transaction("agent_0", "agent_1", 2, 0 , 10)
+
+    agent.receive_transaction(pending_tx);
+
+    assert len(agent.context['tx_pool']) == 1
+    assert len(agent.context['tx_pool']['agent_0']) == 1
+
+    pending_transactions = agent.get_pending_transactions()
+
+    assert len(pending_transactions) == 1
+    assert len(pending_transactions['agent_0']) == 1
+    assert pending_transactions['agent_0'][0] == pending_tx
+
+    agent.receive_transaction(queued_tx);
+
+    assert len(agent.context['tx_pool']) == 1
+    assert len(agent.context['tx_pool']['agent_0']) == 2
+
+    pending_transactions = agent.get_pending_transactions()
+
+    assert len(pending_transactions) == 1
+    assert len(pending_transactions['agent_0']) == 1
+    assert pending_transactions['agent_0'][0] == pending_tx
+
+    fill_tx = agr4bs.Transaction("agent_0", "agent_1", 1, 0, 10)
+
+    agent.receive_transaction(fill_tx);
+
+    assert len(agent.context['tx_pool']) == 1
+    assert len(agent.context['tx_pool']['agent_0']) == 3
+
+    pending_transactions = agent.get_pending_transactions()
+
+    assert len(pending_transactions) == 1
+    assert len(pending_transactions['agent_0']) == 3
+    assert pending_transactions['agent_0'][0] == pending_tx
+    assert pending_transactions['agent_0'][1] == fill_tx
+    assert pending_transactions['agent_0'][2] == queued_tx
+
+def test_blockchain_maintainer_replace_transaction():
+    """
+       Ensures that a tx can only be replaced if some predefined conditions are met:
+       a tx can only be replaced if another tx with the same nonce and higher fee is
+       provided before the tx to replace is included in a block.
+    """
+    genesis = agr4bs.Block(None, "genesis", [agr4bs.Transaction("genesis", "agent_0", nonce=0, value=10)])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+    agent.process_genesis()
+
+    tx = agr4bs.Transaction("agent_0", "agent_1", nonce=0, fee=0)
+    replacement_tx = agr4bs.Transaction("agent_0", "agent_1", nonce=0, fee=0)
+
+    assert agent.receive_transaction(tx)
+    assert agent.receive_transaction(replacement_tx) == False
+    assert agent.context['tx_pool']['agent_0'][0] == tx
+
+    replacement_tx = agr4bs.Transaction("agent_0", "agent_1", nonce=0, fee=1)
+
+    assert agent.receive_transaction(replacement_tx)
+    assert agent.context['tx_pool']['agent_0'][0] == replacement_tx
+

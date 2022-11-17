@@ -38,6 +38,7 @@ def test_block_creation():
     def condition(environment: agr4bs.Environment):
         return environment.date < epoch + datetime.timedelta(minutes=5)
 
+    scheduler.init()
     scheduler.run(condition)
 
     for agent in agents:

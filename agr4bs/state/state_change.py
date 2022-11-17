@@ -60,6 +60,9 @@ class StateChange():
         """
         return self._account_name
 
+    def __str__(self):
+        return f"type: {self._type} account: {self._account_name}"
+
 
 class AddBalance(StateChange):
 
@@ -81,6 +84,8 @@ class AddBalance(StateChange):
         """
         return self._value
 
+    def __str__(self):
+        return super().__str__() + f" value: {self._value}"
 
 class RemoveBalance(StateChange):
 
@@ -101,6 +106,9 @@ class RemoveBalance(StateChange):
             Get the vale change of the account_name balance
         """
         return self._value
+
+    def __str__(self):
+        return super().__str__() + f" value: {self._value}"
 
 
 class CreateAccount(StateChange):

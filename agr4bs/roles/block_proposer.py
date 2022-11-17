@@ -16,6 +16,7 @@ The BlockProposer implementation which MUST contain the following behaviors :
 """
 
 
+from queue import PriorityQueue
 from ..agents import ExternalAgent, ContextChange, AgentType
 from ..events import CREATE_BLOCK
 from ..network.messages import DiffuseBlock
@@ -62,7 +63,7 @@ class BlockProposer(Role):
 
     @staticmethod
     @export
-    def select_transaction(agent: ExternalAgent, transactions: list[Transaction]) -> list[Transaction]:
+    def select_transactions(agent: ExternalAgent, pending_transactions: dict[list[Transaction]]) -> list[Transaction]:
         """ Select a subset of transactions for inclusion in a block
 
             :param transactions: the available transactions
@@ -70,20 +71,27 @@ class BlockProposer(Role):
             :returns: the list of selected transactions
             :rtype: list[Transaction]
         """
-        return []
+
+        # Default selection strategy selects one pending transaction per account
+        selected_transactions = [pending_transactions[account_pending][0] for account_pending in pending_transactions]
+
+        return selected_transactions
 
     @staticmethod
     @export
     @on(CREATE_BLOCK)
     def can_create_block(agent: ExternalAgent):
-        """
-            Behavior called on CREATE_BLOCK event. This is a system event triggered
+        """ Behavior called on CREATE_BLOCK event. This is a system event triggered
             by the Environment.
 
             It is a one time authorization to create and propose a new Block to the network.
         """
 
-        agent.propose_block(agent.create_block([]))
+        pending_transactions = agent.get_pending_transactions()
+        selected_transactions = agent.select_transactions(pending_transactions)
+        block = agent.create_block(selected_transactions)
+        agent.append_block(block)
+        agent.propose_block(block)
 
     @staticmethod
     @export
@@ -95,8 +103,9 @@ class BlockProposer(Role):
             :returns: the block with the transactions included in it
             :rtype: Block
         """
+
         head_hash = agent.context['blockchain'].head.hash
-        return Block(head_hash, agent.name, transactions)
+        return agent.context['factory'].build_block(head_hash, agent.name, transactions)
 
     @staticmethod
     @export

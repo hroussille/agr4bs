@@ -57,7 +57,7 @@ class Scheduler(ExternalAgent):
             self._environment.date = message.date
             agent.handle_message(message)
 
-    def run(self, condition: callable, progress=None, init=True, cleanup=True):
+    def run(self, condition: callable, progress=None, init=False, cleanup=True):
         """
             Run the environment until the end condition is True
         """

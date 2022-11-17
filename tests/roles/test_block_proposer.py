@@ -25,7 +25,7 @@ def test_block_proposer_behaviors():
     """
     role = agr4bs.roles.BlockProposer()
 
-    assert 'select_transaction' in role.behaviors
+    assert 'select_transactions' in role.behaviors
     assert 'create_block' in role.behaviors
     assert 'propose_block' in role.behaviors
     assert 'context_change' not in role.behaviors
@@ -86,3 +86,76 @@ def test_block_proposer_removal():
 
     for context_change in role.context_change().mount():
         assert context_change not in agent.context
+
+
+def test_block_proposer_transaction_selection():
+    """
+    Ensures that the default transaction selection strategy behaves as expected
+    """
+    genesis = agr4bs.Block(None, "genesis", [
+                               agr4bs.Transaction("genesis", "agent_0", 0, 0, 100),
+                               agr4bs.Transaction("genesis", "agent_1", 0, 0, 100)
+                           ])
+
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+    agent.add_role(agr4bs.roles.BlockProposer())
+    agent.process_genesis()
+
+    pending_tx1 = agr4bs.Transaction("agent_0", "agent_2", 0, 0, 10)
+    pending_tx2 = agr4bs.Transaction("agent_1", "agent_2", 0, 0, 10)
+    queued_tx = agr4bs.Transaction("agent_0", "agent_2", 2, 0 , 10)
+
+    agent.receive_transaction(pending_tx1);
+    agent.receive_transaction(pending_tx2);
+    agent.receive_transaction(queued_tx);
+
+    pending_transactions = agent.get_pending_transactions()
+
+    selected_transactions = agent.select_transactions(pending_transactions)
+
+    assert len(selected_transactions) == 2
+    assert selected_transactions[0] == pending_tx1
+    assert selected_transactions[1] == pending_tx2
+
+    
+def test_block_proposer_block_creation():
+    """
+    Ensures that the block creation behavior correctly populate a new block
+    """
+    genesis = agr4bs.Block(None, "genesis", [
+                               agr4bs.Transaction("genesis", "agent_0", 0, 0, 100),
+                               agr4bs.Transaction("genesis", "agent_1", 0, 0, 100)
+                           ])
+
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
+
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
+    agent.add_role(agr4bs.roles.BlockProposer())
+    agent.process_genesis()
+
+    pending_tx1 = agr4bs.Transaction("agent_0", "agent_2", 0, 0, 10)
+    pending_tx2 = agr4bs.Transaction("agent_1", "agent_2", 0, 0, 10)
+
+    agent.receive_transaction(pending_tx1);
+    agent.receive_transaction(pending_tx2);
+    agent.can_create_block()
+
+    head = agent.context['blockchain'].head
+
+    # Check proper inclusion in the blockchain
+    assert head.hash != genesis.hash
+    assert head.parent_hash == genesis.hash
+
+    # Check proper body content according the pending tx
+    assert len(head.transactions) == 2
+    assert head.transactions[0] == pending_tx1
+    assert head.transactions[1] == pending_tx2
+
+    # Check proper state transition according to block content
+    assert agent.context['state'].get_account_balance('agent_2') == 20
+    assert pending_tx1.hash in agent.context['receipts']
+    assert pending_tx2.hash in agent.context['receipts']

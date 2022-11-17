@@ -174,4 +174,4 @@ class VM:
         if response.reverted is False:
             context.merge_changes(intermediate_context.changes)
 
-        return Receipt(tx.hash, context.changes, response.reverted, response.revert_reason)
+        return Receipt(tx, context.changes, response.reverted, response.revert_reason)

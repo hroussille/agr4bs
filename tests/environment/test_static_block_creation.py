@@ -17,7 +17,6 @@ def test_block_creation():
 
     agr4bs.Factory.build_network(reset=True)
     genesis = agr4bs.Block(None, "genesis", [])
-
     agents = []
 
     for i in range(10):
@@ -35,7 +34,6 @@ def test_block_creation():
         env.add_agent(agent)
 
     epoch = datetime.datetime.utcfromtimestamp(0)
-
     scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
 
     def condition(environment: agr4bs.Environment) -> bool:
@@ -45,6 +43,7 @@ def test_block_creation():
         delta: datetime.timedelta = environment.date - epoch
         return min(1, delta.total_seconds() / datetime.timedelta(days=1).total_seconds())
 
+    scheduler.init()
     scheduler.run(condition, progress=progress)
 
     heads = [agent.context['blockchain'].head for agent in agents]

@@ -70,7 +70,7 @@ class TransactionProposer(Role):
 
     @staticmethod
     @export
-    def propose_transaction(agent: Agent, transaction: Transaction, *args, **kwargs) -> None:
+    def propose_transaction(agent: Agent, transaction: Transaction) -> None:
         """ Propose a transaction to the network
 
             :param agent: the agent on which the behavior operates
