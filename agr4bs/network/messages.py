@@ -4,7 +4,7 @@
 
 from agr4bs.blockchain.block import BlockHeader
 from agr4bs.blockchain.transaction import Transaction
-from agr4bs.events.events import RECEIVE_TRANSACTION
+from agr4bs.events.events import CREATE_TRANSACTION, RECEIVE_TRANSACTION
 from ..events import REQUEST_BOOTSTRAP_STATIC_PEERS, BOOTSTRAP_STATIC_PEERS
 from ..events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
 from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
@@ -285,6 +285,17 @@ class DiffuseBlock(Message):
     def __init__(self, origin: str, block: Block):
         _event = RECEIVE_BLOCK
         super().__init__(origin, _event, Block.from_serialized(block.serialize()))
+
+class CreateTransaction(Message):
+
+    """
+        System Message sent to notify an agent that it can create
+        a Transaction.
+    """
+
+    def __init__(self, origin: str, fee:int, amount:int, payload: int, receiver: int):
+        _event = CREATE_TRANSACTION
+        super().__init__(origin, _event, fee, amount, payload, receiver)
 
 class DiffuseTransaction(Message):
 

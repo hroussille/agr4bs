@@ -15,7 +15,6 @@ The BlockchainMaintainer implementation which MUST contain the following behavio
 - execute_transaction
 - append_block
 """
-from queue import PriorityQueue
 from agr4bs.events.events import INIT
 from agr4bs.state.account import Account
 from agr4bs.state.state_change import AddBalance, CreateAccount, RemoveBalance
@@ -43,7 +42,7 @@ class BlockchainMaintainerContextChange(ContextChange):
         self.receipts: dict[Receipt] = {}
 
         # tx_pool holds transactions ready to be processed
-        self.tx_pool: dict[dict[Transaction]] = {}
+        self.tx_pool: dict[dict[Transaction]] = self.init_tx_pool
 
         self.vm = self.init_vm
         self.blockchain = self.init_blockchain
@@ -74,9 +73,19 @@ class BlockchainMaintainerContextChange(ContextChange):
             Initialize the state
         """
         factory: Factory = context['factory']
-
         state: State = factory.build_state()
+
         return state
+
+    @staticmethod
+    def init_tx_pool(context: Context):
+        """
+            Initialize the tx pool
+        """
+        factory: Factory = context['factory']
+        tx_pool = factory.build_tx_pool()
+
+        return tx_pool
 
 
 class BlockchainMaintainer(Role):
@@ -213,10 +222,11 @@ class BlockchainMaintainer(Role):
             :returns: wether the transaction is valid or not
             :rtype: bool
         """
-        sender_account = agent.context['state'].get_account(tx.origin)
 
         if tx.hash in agent.context['receipts']:
             return False
+
+        sender_account = agent.context['state'].get_account(tx.origin)
 
         if sender_account is None:
             return False
@@ -230,14 +240,12 @@ class BlockchainMaintainer(Role):
                 return False
 
         # Replacement is only allowed if the replacement fee is higher than the existing one
-        # TODO: make this a configurable input later on
         if tx.origin in agent.context['tx_pool'] and tx.nonce in agent.context['tx_pool'][tx.origin]:
             exising_tx = agent.context['tx_pool'][tx.origin][tx.nonce]
             if (tx.fee <= exising_tx.fee):
                 return False
-        
-        return True
 
+        return True
 
     @staticmethod
     @export
@@ -270,7 +278,8 @@ class BlockchainMaintainer(Role):
                 pending_transactions_by_account[account] = []
 
                 while nonce in agent.context['tx_pool'][account]:
-                    pending_transactions_by_account[account].append(agent.context['tx_pool'][account][nonce])
+                    pending_transactions_by_account[account].append(
+                        agent.context['tx_pool'][account][nonce])
                     nonce = nonce + 1
 
         return pending_transactions_by_account
@@ -292,7 +301,7 @@ class BlockchainMaintainer(Role):
         if tx.origin not in agent.context['tx_pool']:
             agent.context['tx_pool'][tx.origin] = {}
 
-        agent.context['tx_pool'][tx.origin][tx.nonce] = tx;
+        agent.context['tx_pool'][tx.origin][tx.nonce] = tx
 
     @staticmethod
     @export
@@ -314,7 +323,6 @@ class BlockchainMaintainer(Role):
             if len(agent.context['tx_pool'][tx.origin]) == 0:
                 del agent.context['tx_pool'][tx.origin]
 
-    
     @staticmethod
     @export
     def append_block(agent: ExternalAgent, block: Block) -> bool:
@@ -328,7 +336,8 @@ class BlockchainMaintainer(Role):
             :rtype: bool
         """
         if agent.validate_block(block):
-            head_changed, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(block)
+            head_changed, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(
+                block)
 
             # Only reorg if the head changed
             if head_changed:
@@ -356,11 +365,13 @@ class BlockchainMaintainer(Role):
             # - reorg to the new head
             if not agent.execute_block(added_block):
                 if agent.context["blockchain"].mark_invalid(added_block):
-                    previous_head = agent.context["blockchain"].get_block(added_block.parent_hash)
+                    previous_head = agent.context["blockchain"].get_block(
+                        added_block.parent_hash)
                     new_head = agent.context["blockchain"].find_new_head()
 
                     if previous_head.hash != new_head.hash:
-                        to_revert, to_add = agent.context["blockchain"].find_path(previous_head, new_head)
+                        to_revert, to_add = agent.context["blockchain"].find_path(
+                            previous_head, new_head)
                         agent.reorg(to_revert, to_add)
 
                     else:
@@ -443,7 +454,8 @@ class BlockchainMaintainer(Role):
         if tx.hash in agent.context['receipts']:
             raise ValueError("Executing an already seen transaction.")
 
-        receipt = agent.context['vm'].process_tx(agent.context["state"].copy(), tx)
+        receipt = agent.context['vm'].process_tx(
+            agent.context["state"].copy(), tx)
         agent.context["state"].apply_batch_state_change(receipt.state_changes)
         agent.context["receipts"][tx.hash] = receipt
 

@@ -213,5 +213,5 @@ class State:
         """
             Copy the current State
         """
-        return copy.deepcopy(self)
-        # return pickle.loads(pickle.dumps(self))
+        #return copy.deepcopy(self)
+        return pickle.loads(pickle.dumps(self))

@@ -13,6 +13,7 @@ from ..agents import InternalAgent, InternalAgentCalldata, InternalAgentResponse
 
 DEPTH_LIMIT = 32
 
+
 class TransactionType(Enum):
     """
         Valid transaction types
@@ -94,11 +95,12 @@ class VM:
             return Revert("VM : Max call dapth exceeded")
 
         if recipient is None and ctx.state.has_account(deployement.agent.name) is False:
-            changes.append(CreateAccount(Account(deployement.agent.name, internal_agent=deployement.agent)))
+            changes.append(CreateAccount(
+                Account(deployement.agent.name, internal_agent=deployement.agent)))
 
             if ctx.state.get_account_internal_agent(ctx.caller) is not None:
                 changes.append(IncrementAccountNonce(ctx.caller))
-                
+
             ctx.state.apply_batch_state_change(changes)
             ctx.merge_changes(changes)
         else:

@@ -8,7 +8,7 @@ import agr4bs
 from agr4bs.agents.external_agent import ExternalAgent
 
 
-async def test_block_creation():
+def test_topology():
     """
         Test that the environment can be run and stopped later
         with no error or unwaited tasks
@@ -32,7 +32,7 @@ async def test_block_creation():
         env.add_agent(agent)
 
     epoch = datetime.datetime.utcfromtimestamp(0)
-    
+
     scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
 
     def condition(environment: agr4bs.Environment) -> bool:
@@ -51,4 +51,3 @@ async def test_block_creation():
 
         # Ensute that each agent can receive from at least max_outbound_peers other agents
         assert len(agent.context['inbound_peers']) >= agent.max_outbound_peers
-

@@ -15,8 +15,6 @@ The BlockProposer implementation which MUST contain the following behaviors :
 - propose_block
 """
 
-
-from queue import PriorityQueue
 from ..agents import ExternalAgent, ContextChange, AgentType
 from ..events import CREATE_BLOCK
 from ..network.messages import DiffuseBlock
@@ -73,7 +71,11 @@ class BlockProposer(Role):
         """
 
         # Default selection strategy selects one pending transaction per account
-        selected_transactions = [pending_transactions[account_pending][0] for account_pending in pending_transactions]
+        selected_transactions = []
+
+        for account_pending in pending_transactions:
+            selected_transactions.append(
+                pending_transactions[account_pending][0])
 
         return selected_transactions
 
@@ -87,9 +89,31 @@ class BlockProposer(Role):
             It is a one time authorization to create and propose a new Block to the network.
         """
 
+        state_copy = agent.context['state'].copy()
         pending_transactions = agent.get_pending_transactions()
-        selected_transactions = agent.select_transactions(pending_transactions)
+        selected_transactions = []
+
+        for i in range(10):
+            top_txs = [pending_transactions[account][0]
+                       for account in pending_transactions]
+            top_txs.sort(key=lambda tx: tx.fee)
+
+            if len(top_txs) == 0:
+                break
+
+            top_tx = top_txs[0]
+
+            receipt = agent.context['vm'].process_tx(state_copy.copy(), top_tx)
+            state_copy.apply_batch_state_change(receipt.state_changes)
+
+            selected_transactions.append(top_tx)
+            pending_transactions[top_tx.origin].remove(top_tx)
+
+            if len(pending_transactions[top_tx.origin]) == 0:
+                del pending_transactions[top_tx.origin]
+
         block = agent.create_block(selected_transactions)
+
         agent.append_block(block)
         agent.propose_block(block)
 

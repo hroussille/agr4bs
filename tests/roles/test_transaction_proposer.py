@@ -38,8 +38,11 @@ def test_transaction_proposer_addition():
     - Agent has all the TransactionProposer behaviors
     - Agent has all the TransactionProposer context changes
     """
-    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.TransactionProposer()
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
     agent.add_role(role)
 
     assert agent.has_role(agr4bs.RoleType.TRANSACTION_PROPOSER)
@@ -62,9 +65,11 @@ def test_transaction_proposer_removal():
     - Agent has none of the TransactionProposer behaviors
     - Agent has none of the TransactionProposer context changes
     """
-    agent = agr4bs.Agent("agent_0", agr4bs.AgentType.EXTERNAL_AGENT)
+    genesis = agr4bs.Block(None, None, [])
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
     role = agr4bs.roles.TransactionProposer()
-
+    agent.add_role(agr4bs.roles.Peer())
+    agent.add_role(agr4bs.roles.BlockchainMaintainer())
     agent.add_role(role)
     agent.remove_role(role)
 

@@ -34,6 +34,7 @@ from .events import SEND_MESSAGE
 from .events import RECEIVE_BLOCK
 from .events import RECEIVE_TRANSACTION
 from .events import CREATE_BLOCK
+from .events import CREATE_TRANSACTION
 from .events import RUN_SCHEDULABLE
 from .events import REQUEST_BLOCK_HEADER
 from .events import RECEIVE_BLOCK_HEADER

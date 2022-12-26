@@ -19,6 +19,7 @@ class Factory:
     """
 
     __network = None
+    __tx_pool = None
 
     @staticmethod
     def build_blockchain(genesis: Block) -> Blockchain:
@@ -71,6 +72,26 @@ class Factory:
             Builds a black box Network implementation
         """
         if Factory.__network is None or reset is True:
-            Factory.__network = Network(delay=60, drop_rate=0.01)
+            Factory.__network = Network(delay=200, drop_rate=0.005)
 
         return Factory.__network
+
+    @staticmethod
+    def build_tx_pool() -> dict[dict[Transaction]]:
+        """
+            Builds a black box tx pool implementation
+
+            - This can be a singleton : shared tx pool accross all agents, or a new instance
+            everytime meaning that all agents maintain an individual tx pool
+        """
+        return {}
+
+    @staticmethod
+    def build_shared_tx_pool(reset=False) -> dict[dict[Transaction]]:
+        """
+            Builds a black box shared tx pool implementation
+        """
+        if Factory.__tx_pool is None or reset is True:
+            Factory.__tx_pool = {}
+
+        return Factory.__tx_pool

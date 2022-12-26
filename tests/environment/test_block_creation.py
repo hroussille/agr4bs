@@ -8,7 +8,7 @@ from collections import Counter
 import agr4bs
 
 
-async def test_block_creation():
+def test_block_creation():
     """
         Test that the environment can be run and stopped later
         with no error or unwaited tasks
@@ -20,7 +20,7 @@ async def test_block_creation():
 
     agents = []
 
-    for i in range(10):
+    for i in range(20):
         agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.Factory)
         agent.add_role(agr4bs.roles.Peer())
         agent.add_role(agr4bs.roles.BlockchainMaintainer())
@@ -33,16 +33,16 @@ async def test_block_creation():
 
     for agent in agents:
         env.add_agent(agent)
-    
+
     epoch = datetime.datetime.utcfromtimestamp(0)
     scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
 
     def condition(environment: agr4bs.Environment) -> bool:
-        return environment.date < epoch + datetime.timedelta(days=1)
+        return environment.date < epoch + datetime.timedelta(hours=1)
 
     def progress(environment: agr4bs.Environment) -> bool:
         delta: datetime.timedelta = environment.date - epoch
-        return min(1, delta.total_seconds() / datetime.timedelta(days=1).total_seconds())
+        return min(1, delta.total_seconds() / datetime.timedelta(hours=1).total_seconds())
 
     scheduler.init()
     scheduler.run(condition, progress=progress)
@@ -62,4 +62,3 @@ async def test_block_creation():
 
     for head_hash, head_height in heads_heights.items():
         assert head_height > 1
-

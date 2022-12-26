@@ -84,7 +84,7 @@ class Blockchain():
         :param new_head: the new head
         :type new_head: Block
         """
-        
+
         if self.get_block(new_head.hash) is None:
             raise ValueError("Setting head with an uknown block")
 
@@ -152,8 +152,9 @@ class Blockchain():
             TODO: optimize this
         """
 
-        sorted_blocks = [block for block in sorted(self._blocks.values(), key=lambda _block: _block.height, reverse=True)]
-        candidate =  next(block for block in sorted_blocks if not block.invalid)
+        sorted_blocks = [block for block in sorted(
+            self._blocks.values(), key=lambda _block: _block.height, reverse=True)]
+        candidate = next(block for block in sorted_blocks if not block.invalid)
 
         if self._is_new_head(candidate):
             return candidate
@@ -236,7 +237,6 @@ class Blockchain():
         return block
 
     def get_children(self, block: Block) -> list[Block]:
-
         """
             Get all the children blocks from a given block
         """
@@ -320,7 +320,6 @@ class Blockchain():
         return True
 
     def mark_invalid(self, block: Block):
-
         """
             Mark a block and all its descendent as invalid
         """
@@ -383,9 +382,10 @@ class Blockchain():
         # Best case scenario : extending the main chain
         if self.is_close_parent(self._head, previous_head, len(added_blocks)):
             appended_blocks = self.get_subchain(self._head, previous_head)
-        
+
         # Worse case scenario : reorg
         else:
-            reverted_blocks, appended_blocks = self.find_path(previous_head, self._head)
+            reverted_blocks, appended_blocks = self.find_path(
+                previous_head, self._head)
 
         return True, reverted_blocks, appended_blocks

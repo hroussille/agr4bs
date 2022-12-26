@@ -37,7 +37,7 @@ class BlockCreatorElector(Role):
 
     @staticmethod
     @export
-    @every(seconds=13)
+    @every(seconds=12)
     def elect_block_creator(agent: Environment):
         """
             Notify a participant that it can create a block.

@@ -110,7 +110,7 @@ class Transaction(Serializable):
             :rtype: str
         """
         hash_dict = {'from': self._origin, 'to': self._to,
-                     'value': self._value, 'fee': self._fee, 'payload': self._payload.serialize()}
+            'value': self._value, 'fee': self._fee, 'payload': self._payload.serialize(), 'nonce': self._nonce}
 
         return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()
 

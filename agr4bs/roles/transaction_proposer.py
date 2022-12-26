@@ -17,7 +17,9 @@ The TransactionProposer implementation which MUST contain the following :
 from .role import Role, RoleType
 from ..agents import Agent, ContextChange, AgentType
 from ..blockchain import Payload, Transaction
-from ..common import export
+from ..common import on, export
+from ..network.messages import DiffuseTransaction
+from ..events import CREATE_TRANSACTION
 
 
 class TransactionProposerContextChange(ContextChange):
@@ -29,7 +31,7 @@ class TransactionProposerContextChange(ContextChange):
     """
 
     def __init__(self) -> None:
-        pass
+        self.nonce = 0
 
 
 class TransactionProposer(Role):
@@ -56,7 +58,7 @@ class TransactionProposer(Role):
 
     @staticmethod
     @export
-    def create_transaction(agent: Agent, paylaod: Payload, receiver: Agent) -> Transaction:
+    def create_transaction(agent: Agent, fee: int, amount: int, payload: Payload, receiver: str) -> Transaction:
         """ Create a transaction with the given payload for the given receiver
 
             :param agent: the agent on which the behavior operates
@@ -66,7 +68,13 @@ class TransactionProposer(Role):
             :param receiver: the receiver of the transaction
             :type receiver: Agent
         """
-        raise NotImplementedError
+
+        if not agent.has_role(RoleType.BLOCKCHAIN_MAINTAINER):
+            return
+
+        nonce = agent.context['state'].get_account_nonce(agent.name)
+
+        return agent.context['factory'].build_transaction(agent.name, receiver, nonce, fee=fee, amount=amount, payload=payload)
 
     @staticmethod
     @export
@@ -78,4 +86,17 @@ class TransactionProposer(Role):
             :param transaction: the transaction to propose to the network
             :type transaction: Transaction
         """
-        raise NotImplementedError
+        outbound_peers = list(agent.context['outbound_peers'])
+        agent.receive_transaction(transaction)
+        agent.send_message(DiffuseTransaction(
+            agent.name, transaction), outbound_peers)
+
+    @staticmethod
+    @export
+    @on(CREATE_TRANSACTION)
+    def create_and_propose_transaction(agent: Agent, fee: int, amount: int, payload: Payload, receiver: str) -> None:
+
+        transaction = agent.create_transaction(fee, amount, payload, receiver)
+
+        if transaction is not None:
+            agent.propose_transaction(transaction)

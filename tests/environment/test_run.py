@@ -6,7 +6,7 @@ import agr4bs
 import datetime
 
 
-async def test_run():
+def test_run():
     """
         Test that the environment can be run and stopped later
         with no error or unwaited tasks

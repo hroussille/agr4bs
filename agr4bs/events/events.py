@@ -45,6 +45,7 @@ ACCEPT_BLOCK_ENDORSEMENT = "accept_block_endorsement"
 DENY_BLOCK_ENDORSEMENT = "deny_block_endorsement"
 
 # Transaction diffusion events
+CREATE_TRANSACTION = "create_transaction"
 RECEIVE_TRANSACTION = "receive_transaction"
 
 # Transaction endorsement events

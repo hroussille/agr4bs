@@ -126,9 +126,9 @@ def test_block_proposer_block_creation():
     Ensures that the block creation behavior correctly populate a new block
     """
     genesis = agr4bs.Block(None, "genesis", [
-                               agr4bs.Transaction("genesis", "agent_0", 0, 0, 100),
-                               agr4bs.Transaction("genesis", "agent_1", 0, 0, 100)
-                           ])
+                           agr4bs.Transaction("genesis", "agent_0", 0, 0, 100),
+                           agr4bs.Transaction("genesis", "agent_1", 0, 0, 100)
+                       ])
 
     agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.Factory)
 
