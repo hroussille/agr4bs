@@ -15,11 +15,11 @@ The Peer implementation which MUST contain the following behaviors :
 from math import exp
 import random
 
-from ..environment import Environment
-from ..agents import AgentType
-from ..network.messages import CreateBlock
-from .role import Role, RoleType
-from ..common import export, every
+from ....environment import Environment
+from ....agents import AgentType
+from ....network.messages import CreateBlock
+from ....roles import Role, RoleType
+from ....common import export, every
 
 
 class BlockCreatorElector(Role):

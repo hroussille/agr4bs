@@ -35,8 +35,8 @@ def test_block_creation():
 
     env = agr4bs.Environment(model.Factory)
     env.add_role(agr4bs.roles.StaticBootstrap())
-    env.add_role(agr4bs.roles.BlockCreatorElector())
-    env.add_role(agr4bs.roles.TransactionCreatorElector())
+    env.add_role(agr4bs.models.eth.roles.BlockCreatorElector())
+    env.add_role(agr4bs.models.eth.roles.TransactionCreatorElector())
 
     for agent in agents:
         env.add_agent(agent)
@@ -61,6 +61,8 @@ def test_block_creation():
 
     for ref in agents:
         ref_nonce = ref.context['state'].get_account_nonce(ref.name)
+
+        print("agent : ", ref.name, " nonce : ", ref_nonce)
 
         for agent in agents:
             assert agent.context['state'].get_account_nonce(

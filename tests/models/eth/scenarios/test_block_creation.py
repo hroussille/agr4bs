@@ -30,7 +30,7 @@ def test_block_creation():
 
     env = agr4bs.Environment(agr4bs.models.eth.Factory)
     env.add_role(agr4bs.roles.Bootstrap())
-    env.add_role(agr4bs.roles.BlockCreatorElector())
+    env.add_role(agr4bs.models.eth.roles.BlockCreatorElector())
 
     for agent in agents:
         env.add_agent(agent)

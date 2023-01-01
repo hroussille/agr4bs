@@ -11,3 +11,5 @@ from .investor import Investor
 from .oracle import Oracle
 from .transaction_endorser import TransactionEndorser
 from .transaction_proposer import TransactionProposer
+from .block_creator_elector import BlockCreatorElector
+from .transaction_creator_elector import TransactionCreatorElector

@@ -13,11 +13,11 @@ The Peer implementation which MUST contain the following behaviors :
 """
 import random
 
-from ..environment import Environment
-from ..agents import AgentType
-from ..network.messages import CreateTransaction
-from .role import Role, RoleType
-from ..common import export, every
+from ....environment import Environment
+from ....agents import AgentType
+from ....network.messages import CreateTransaction
+from ....roles import Role, RoleType
+from ....common import export, every
 
 
 class TransactionCreatorElector(Role):
@@ -31,12 +31,12 @@ class TransactionCreatorElector(Role):
     @staticmethod
     @export
     @every(minutes=1)
-    def elect_transaction_creator(agent: Environment):
+    def elect_transaction_creator(env: Environment):
         """
             Notify a participant that it can create a transaction.
             This is a system event.
         """
-        selected = random.choice(agent.agents_names)
+        selected = random.choice(env.agents_names)
 
-        agent.send_system_message(CreateTransaction(
-            agent.name, 0, 0, None, "genesis"), selected)
+        env.send_system_message(CreateTransaction(
+            env.name, 0, 0, None, "genesis"), selected)
