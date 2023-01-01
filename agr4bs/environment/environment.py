@@ -5,8 +5,7 @@ import random
 
 from ..network.messages import StopSimulation
 from ..agents import ExternalAgent
-from ..factory import Factory
-from agr4bs import agents
+from ..factory import IFactory
 
 
 class Environment(ExternalAgent):
@@ -18,7 +17,7 @@ class Environment(ExternalAgent):
         to form a complete simulation.
     """
 
-    def __init__(self, factory: Factory):
+    def __init__(self, factory: IFactory):
         super().__init__("environment", None, factory)
         self._agents = {}
         self._network.register_agent(self)

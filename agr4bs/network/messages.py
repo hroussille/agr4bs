@@ -2,18 +2,15 @@
     Core and Custom messages types definitions
 """
 
-from agr4bs.blockchain.block import BlockHeader
-from agr4bs.blockchain.transaction import Transaction
-from agr4bs.events.events import CREATE_TRANSACTION, RECEIVE_TRANSACTION
+from ..blockchain.block import IBlockHeader
+from ..events import CREATE_TRANSACTION, RECEIVE_TRANSACTION
 from ..events import REQUEST_BOOTSTRAP_STATIC_PEERS, BOOTSTRAP_STATIC_PEERS
 from ..events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
 from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
 from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER, DROP_INBOUND_PEER
 from ..events import STOP_SIMULATION
-from ..events import CREATE_BLOCK, RECEIVE_BLOCK, REQUEST_BLOCK, RECEIVE_BLOCK_HEADER, REQUEST_BLOCK_HEADER
+from ..events import CREATE_BLOCK, RECEIVE_BLOCK, REQUEST_BLOCK, RECEIVE_BLOCK_HEADER
 from ..events import RUN_SCHEDULABLE
-
-from ..blockchain import Block
 
 
 class Message:
@@ -253,9 +250,10 @@ class ProposeBlockHeader(Message):
         Message sent to propose a newly created block header to other participants
     """
 
-    def __init__(self, origin: str, header: BlockHeader):
+    def __init__(self, origin: str, header: IBlockHeader):
         _event = RECEIVE_BLOCK_HEADER
         super().__init__(origin, _event, header.from_serialized(header.serialize))
+
 
 class ProposeBlock(Message):
 
@@ -263,18 +261,21 @@ class ProposeBlock(Message):
         Message sent to propose a newly created block to other participants.
     """
 
-    def __init__(self, origin: str, block: Block):
+    def __init__(self, origin: str, block: 'Block'):
         _event = RECEIVE_BLOCK
-        super().__init__(origin, _event, Block.from_serialized(block.serialize()))
+        super().__init__(origin, _event, block.from_serialized(block.serialize()))
+
 
 class RequestBlock(Message):
 
     """ 
         Message sent to request a specific block to one or several peer
     """
+
     def __init__(self, origin: str, hash: str):
         _event = REQUEST_BLOCK
         super().__init__(origin, _event, hash)
+
 
 class DiffuseBlock(Message):
 
@@ -282,9 +283,10 @@ class DiffuseBlock(Message):
         Message sent to diffuse a block to the network
     """
 
-    def __init__(self, origin: str, block: Block):
+    def __init__(self, origin: str, block: 'Block'):
         _event = RECEIVE_BLOCK
-        super().__init__(origin, _event, Block.from_serialized(block.serialize()))
+        super().__init__(origin, _event, block.from_serialized(block.serialize()))
+
 
 class CreateTransaction(Message):
 
@@ -293,9 +295,10 @@ class CreateTransaction(Message):
         a Transaction.
     """
 
-    def __init__(self, origin: str, fee:int, amount:int, payload: int, receiver: int):
+    def __init__(self, origin: str, fee: int, amount: int, payload: int, receiver: int):
         _event = CREATE_TRANSACTION
         super().__init__(origin, _event, fee, amount, payload, receiver)
+
 
 class DiffuseTransaction(Message):
 
@@ -303,6 +306,6 @@ class DiffuseTransaction(Message):
         Message sent to diffuse a transaction to the network
     """
 
-    def __init__(self, origin: str, tx: Transaction):
+    def __init__(self, origin: str, tx: 'Transaction'):
         _event = RECEIVE_TRANSACTION
-        super().__init__(origin, _event, Transaction.from_serialized(tx.serialize()))
+        super().__init__(origin, _event, tx.from_serialized(tx.serialize()))

@@ -6,9 +6,9 @@
 import hashlib
 import pickle
 from ..common import Serializable
-from .transaction import Transaction
+from .transaction import ITransaction
 
-class BlockHeader(Serializable):
+class IBlockHeader(Serializable):
 
     """
         Block Header class implementation
@@ -19,7 +19,7 @@ class BlockHeader(Serializable):
         self._parent_hash = parent_hash
         self._hash = hash
 
-class Block(Serializable):
+class IBlock(Serializable):
 
     """
         Block class implementation :
@@ -30,7 +30,7 @@ class Block(Serializable):
 
     _nonce = 0
 
-    def __init__(self, parent_hash: str, creator: str, transactions: list[Transaction] = None) -> None:
+    def __init__(self, parent_hash: str, creator: str, transactions: list[ITransaction] = None) -> None:
         self._parent_hash = parent_hash
 
         if transactions is None:
@@ -41,19 +41,19 @@ class Block(Serializable):
         self._total_fees = sum(map(lambda tx: tx.fee, self._transactions))
         self._height = 0
 
-        self._number = Block._nonce
-        Block._nonce = Block._nonce + 1
+        self._number = IBlock._nonce
+        IBlock._nonce = IBlock._nonce + 1
 
         self._hash = self.compute_hash()
         self._invalid = False
 
 
     @property
-    def header(self) -> BlockHeader:
+    def header(self) -> IBlockHeader:
         """
             Get the header of the block
         """
-        return BlockHeader(self._parent_hash, self._creator, self._hash)
+        return IBlockHeader(self._parent_hash, self._creator, self._hash)
         
     @property
     def parent_hash(self) -> "str":
@@ -65,11 +65,20 @@ class Block(Serializable):
         return self._parent_hash
 
     @property
-    def transactions(self) -> list[Transaction]:
+    def total_fees(self) -> int:
+        """ Get the sum of the fees of all Transactions contained in the Block
+
+            :returns: The total fees of the Block
+            :rtype: int
+        """
+        return self._total_fees
+
+    @property
+    def transactions(self) -> list[ITransaction]:
         """ Get the Transactions contained within the Block
 
             :returns: the Transaction included in the Block
-            :rtype: list[Transaction]
+            :rtype: list[ITransaction]
         """
         return self._transactions
 
@@ -81,15 +90,6 @@ class Block(Serializable):
             :rtype: Agent
         """
         return self._creator
-
-    @property
-    def total_fees(self) -> int:
-        """ Get the sum of the fees of all Transactions contained in the Block
-
-            :returns: The total fees of the Block
-            :rtype: int
-        """
-        return self._total_fees
 
     @property
     def hash(self) -> str:
@@ -155,7 +155,7 @@ class Block(Serializable):
 
     def __eq__(self, __o: object) -> bool:
 
-        if not isinstance(__o, Block):
+        if not isinstance(__o, IBlock):
             return False
 
         return self._hash == __o.compute_hash()

@@ -6,14 +6,12 @@ import datetime
 
 from collections import defaultdict
 from typing import Union
-from agr4bs.events.events import RUN_SCHEDULABLE
-
-from agr4bs.network.messages import RunSchedulable
-
+from ..events.events import RUN_SCHEDULABLE
+from ..network.messages import RunSchedulable
 from ..events import INIT, STOP_SIMULATION, RECEIVE_MESSAGE, SEND_MESSAGE, CLEANUP
 from ..network import Message
 from .agent import Agent, AgentType
-from ..blockchain import Block
+from ..blockchain import IBlock
 from .schedulable import Schedulable
 
 
@@ -26,7 +24,7 @@ class ExternalAgent(Agent):
         It may contribute to the system or simply interact with it autonomously.
     """
 
-    def __init__(self, name: str, genesis: Block, factory: 'Factory'):
+    def __init__(self, name: str, genesis: IBlock, factory: 'Factory'):
 
         super().__init__(name, AgentType.EXTERNAL_AGENT)
 

@@ -11,11 +11,11 @@ def test_agent_addition():
         Test that an agent is correctly added to the Environment
     """
 
-    agr4bs.Factory.build_network(reset=True)
-    genesis = agr4bs.Block(
+    agr4bs.IFactory.build_network(reset=True)
+    genesis = agr4bs.IBlock(
         parent_hash=None, creator='genesis', transactions=[])
-    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
-    env = agr4bs.Environment(agr4bs.Factory)
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.IFactory)
+    env = agr4bs.Environment(agr4bs.IFactory)
 
     env.add_agent(agent)
 
@@ -31,11 +31,11 @@ def test_agent_double_addition():
         Test that an agent cannot be added twice
     """
 
-    agr4bs.Factory.build_network(reset=True)
-    genesis = agr4bs.Block(
+    agr4bs.IFactory.build_network(reset=True)
+    genesis = agr4bs.IBlock(
         parent_hash=None, creator='genesis', transactions=[])
-    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
-    env = agr4bs.Environment(agr4bs.Factory)
+    agent = agr4bs.ExternalAgent("agent0", genesis, agr4bs.IFactory)
+    env = agr4bs.Environment(agr4bs.IFactory)
 
     env.add_agent(agent)
 
@@ -51,13 +51,13 @@ def test_agent_double_addition_name_conflict():
         Test that two agent with conflicting mames cannot be
         added to the state
     """
-    agr4bs.Factory.build_network(reset=True)
-    genesis = agr4bs.Block(
+    agr4bs.IFactory.build_network(reset=True)
+    genesis = agr4bs.IBlock(
         parent_hash=None, creator='genesis', transactions=[])
-    agent0 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
-    agent1 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.Factory)
+    agent0 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.IFactory)
+    agent1 = agr4bs.ExternalAgent("agent0", genesis, agr4bs.IFactory)
 
-    env = agr4bs.Environment(agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.IFactory)
 
     env.add_agent(agent0)
 

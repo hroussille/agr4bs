@@ -9,7 +9,7 @@ from ..common import Serializable
 from .payload import Payload
 
 
-class Transaction(Serializable):
+class ITransaction(Serializable):
 
     """
         Transaction class implementation :
@@ -116,7 +116,7 @@ class Transaction(Serializable):
 
     def __eq__(self, __o: object) -> bool:
 
-        if not isinstance(__o, Transaction):
+        if not isinstance(__o, ITransaction):
             return False
 
         return self._hash == __o.compute_hash()

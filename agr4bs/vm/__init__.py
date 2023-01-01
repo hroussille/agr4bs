@@ -2,5 +2,5 @@
     agr4bs vm submodule
 """
 
-from .default_vm import VM
+from .vm import IVM, TransactionType
 from .execution_context import ExecutionContext

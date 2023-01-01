@@ -15,17 +15,17 @@ def test_topology():
     """
     random.seed(1)
 
-    agr4bs.Factory.build_network(reset=True)
-    genesis = agr4bs.Block(None, "genesis", [])
+    agr4bs.IFactory.build_network(reset=True)
+    genesis = agr4bs.IBlock(None, "genesis", [])
 
     agents: ExternalAgent = []
 
     for i in range(20):
-        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.Factory)
+        agent = agr4bs.ExternalAgent(f"agent_{i}", genesis, agr4bs.IFactory)
         agent.add_role(agr4bs.roles.Peer())
         agents.append(agent)
 
-    env = agr4bs.Environment(agr4bs.Factory)
+    env = agr4bs.Environment(agr4bs.IFactory)
     env.add_role(agr4bs.roles.Bootstrap())
 
     for agent in agents:
@@ -33,7 +33,7 @@ def test_topology():
 
     epoch = datetime.datetime.utcfromtimestamp(0)
 
-    scheduler = agr4bs.Scheduler(env, agr4bs.Factory, current_time=epoch)
+    scheduler = agr4bs.Scheduler(env, agr4bs.IFactory, current_time=epoch)
 
     def condition(environment: agr4bs.Environment) -> bool:
         return environment.date < epoch + datetime.timedelta(days=1)

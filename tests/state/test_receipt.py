@@ -12,7 +12,7 @@ def test_receipt_properties():
         Test that a Receipt properties can be queried
     """
 
-    tx = agr4bs.Transaction("agent_0", "agent_1", 0)
+    tx = agr4bs.ITransaction("agent_0", "agent_1", 0)
     state_changes = []
     reverted = False
 
@@ -29,7 +29,7 @@ def test_receipt_properties_immutability():
         Test that a Receipt data is immutable
     """
 
-    tx = agr4bs.Transaction("agent_0", "agent_1", 0)
+    tx = agr4bs.ITransaction("agent_0", "agent_1", 0)
     state_changes = []
     reverted = False
 

@@ -1,5 +1,5 @@
 """
-    agr4bs.factory submodule
+    agr4bs.IFactory submodule
 """
 
-from .default_factory import Factory
+from .factory import IFactory

@@ -3,7 +3,7 @@
 """
 
 from typing import NamedTuple
-from ..blockchain import Transaction
+from ..blockchain import ITransaction
 from .state_change import StateChange
 
 class Receipt(NamedTuple):
@@ -14,7 +14,7 @@ class Receipt(NamedTuple):
         all StateChange required to apply or revert the Transaction.
     """
 
-    tx: Transaction
+    tx: ITransaction
     state_changes: list[StateChange]
     reverted: bool
     revert_reason: str
