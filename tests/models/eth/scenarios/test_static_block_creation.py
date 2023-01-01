@@ -62,8 +62,6 @@ def test_block_creation():
     for ref in agents:
         ref_nonce = ref.context['state'].get_account_nonce(ref.name)
 
-        print("agent : ", ref.name, " nonce : ", ref_nonce)
-
         for agent in agents:
             assert agent.context['state'].get_account_nonce(
                 ref.name) == ref_nonce
