@@ -3,5 +3,5 @@ from . import factory
 from . import roles
 
 from .factory import Factory
-from .blockchain import Transaction, Block, Blockchain, Payload
+from .blockchain import Transaction, Block, Blockchain
 from .vm import VM

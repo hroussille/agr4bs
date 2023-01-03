@@ -3,7 +3,8 @@
 """
 
 import pickle
-from agr4bs.models.eth.blockchain import Payload, Transaction
+from agr4bs.blockchain import Payload
+from agr4bs.models.eth.blockchain import Transaction
 
 
 def test_tx_no_payload():

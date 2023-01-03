@@ -2,8 +2,9 @@
     Agr4bsFactory file class implementation
 """
 
+from ....blockchain import Payload
 from ....network import Network
-from ..blockchain import Blockchain, Block, Transaction, Payload
+from ..blockchain import Blockchain, Block, Transaction
 from ..vm import VM
 from ....state import State
 

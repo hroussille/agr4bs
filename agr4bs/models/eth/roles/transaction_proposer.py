@@ -16,7 +16,8 @@ The TransactionProposer implementation which MUST contain the following :
 
 from ....roles import Role, RoleType
 from ....agents import Agent, ContextChange, AgentType
-from ..blockchain import Payload, Transaction
+from ..blockchain import Transaction
+from ....blockchain import Payload
 from ....common import on, export
 from ....network.messages import DiffuseTransaction
 from ....events import CREATE_TRANSACTION
