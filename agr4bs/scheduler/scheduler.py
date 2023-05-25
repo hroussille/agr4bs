@@ -1,6 +1,8 @@
+
 import datetime
-from ..agents import ExternalAgent
+import logging
 from alive_progress import alive_bar
+from ..agents import ExternalAgent
 
 
 class Scheduler(ExternalAgent):
@@ -18,6 +20,8 @@ class Scheduler(ExternalAgent):
         self._environment = environment
         self._network = factory.build_network()
 
+        logging.basicConfig(level=logging.INFO)
+
     @property
     def current_time(self):
         """
@@ -33,6 +37,7 @@ class Scheduler(ExternalAgent):
         return self._environment
 
     def init(self):
+        logging.info("Initializing the simulation")
         super().init(self.current_time)
         self._environment.init(self._date)
 
@@ -45,6 +50,7 @@ class Scheduler(ExternalAgent):
             Take one "step" in the environment
         """
         message = self._network.get_next_message()
+
         self._current_time = message.date
 
         if message.recipient != self._environment.name:

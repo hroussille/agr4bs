@@ -11,6 +11,9 @@ from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEE
 from ..events import STOP_SIMULATION
 from ..events import CREATE_BLOCK, RECEIVE_BLOCK, REQUEST_BLOCK, RECEIVE_BLOCK_HEADER
 from ..events import RUN_SCHEDULABLE
+from ..events import REQUEST_BLOCK_ENDORSEMENT, RECEIVE_BLOCK_ENDORSEMENT
+from ..events import NEXT_EPOCH, NEXT_SLOT
+from ..common import Serializable
 
 
 class Message:
@@ -232,6 +235,28 @@ class StopSimulation(Message):
         super().__init__(origin, _event)
 
 
+class NextSlot(Message):
+
+    """
+        Message sent to notify an Agent to move on to the next time slot.
+    """
+
+    def __init__(self, origin: str, slot: int, attesters: list[str]):
+        _event = NEXT_SLOT
+        super().__init__(origin, _event, slot, attesters)
+
+
+class NextEpoch(Message):
+
+    """
+        Message sent to notify an Agent to move on the the next time epoch
+    """
+
+    def __init__(self, origin: str, epoch: int, n_attesters: int):
+        _event = NEXT_EPOCH
+        super().__init__(origin, _event, epoch, n_attesters)
+
+
 class CreateBlock(Message):
 
     """
@@ -309,3 +334,21 @@ class DiffuseTransaction(Message):
     def __init__(self, origin: str, tx: 'Transaction'):
         _event = RECEIVE_TRANSACTION
         super().__init__(origin, _event, tx.from_serialized(tx.serialize()))
+
+class RequestBlockEndorsement(Message):
+    """
+        Message sent to request a block endorsement to one or several peer
+    """
+    def __init__(self, origin: str):
+        _event = REQUEST_BLOCK_ENDORSEMENT
+        super().__init__(origin, _event)
+
+class DiffuseBlockEndorsement(Message):
+
+    """
+        Message sent to diffuse a block endorsement to the network
+    """
+
+    def __init__(self, origin: str, endorsement: 'Serializable'):
+        _event = RECEIVE_BLOCK_ENDORSEMENT
+        super().__init__(origin, _event, endorsement.from_serialized(endorsement.serialize()))

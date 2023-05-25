@@ -14,19 +14,19 @@ class StateChangeType(Enum):
     """
 
     # Account data structure related operations
-    CREATE_ACCOUNT = "create_account_name"
-    DELETE_ACCOUNT = "delete_account_name"
+    CREATE_ACCOUNT = "create_account"
+    DELETE_ACCOUNT = "delete_account"
 
     # Account balance related operations
     ADD_BALANCE = "add_balance"
     REMOVE_BALANCE = "remove_balance"
 
     # Account Nonce related operations
-    INCREMENT_ACCOUNT_NONCE = "increment_account_name_nonce"
-    DECREMENT_ACCOUNT_NONCE = "decrement_account_name_nonce"
+    INCREMENT_ACCOUNT_NONCE = "increment_account_nonce"
+    DECREMENT_ACCOUNT_NONCE = "decrement_account_nonce"
 
     # Account Storage related operations
-    UPDATE_ACCOUNT_STORAGE = "set_account_name_storage"
+    UPDATE_ACCOUNT_STORAGE = "update_account_storage"
 
 
 class StateChange():

@@ -75,7 +75,7 @@ def test_call_with_non_existing_account():
 
     payload = Payload(InternalAgentCalldata(
         "custom_non_payable_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1", 0, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1", 0, payload=payload)
     vm = agr4bs.models.eth.VM()
 
     receipt = vm.process_tx(state.copy(), tx)
@@ -120,7 +120,7 @@ def test_call_non_payable_with_value():
 
     payload = Payload(InternalAgentCalldata(
         "custom_non_payable_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1",
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1",
                             0, value=100, payload=payload)
     vm = agr4bs.models.eth.VM()
 
@@ -170,7 +170,7 @@ def test_call_payable_with_existing_account():
 
     payload = Payload(InternalAgentCalldata(
         "custom_payable_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1",
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1",
                             0, value=100, payload=payload)
     vm = agr4bs.models.eth.VM()
 
@@ -218,7 +218,7 @@ def test_call_payable_return_value_with_existing_account():
 
     payload = Payload(InternalAgentCalldata(
         "custom_payable_return_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1",
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1",
                             0, value=100, payload=payload)
     vm = agr4bs.models.eth.VM()
 
@@ -266,7 +266,7 @@ def test_call_with_state_changing_function():
 
     payload = Payload(InternalAgentCalldata(
         "custom_state_changing_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1", 0, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1", 0, payload=payload)
     vm = agr4bs.models.eth.VM()
 
     receipt = vm.process_tx(state.copy(), tx)
@@ -315,7 +315,7 @@ def test_call_with_reverting_function():
 
     payload = Payload(InternalAgentCalldata(
         "custom_reverting_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1", 0, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1", 0, payload=payload)
     vm = agr4bs.models.eth.VM()
 
     receipt = vm.process_tx(state.copy(), tx)

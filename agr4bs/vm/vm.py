@@ -41,17 +41,5 @@ class IVM:
         pass
 
     @staticmethod
-    def transfer(ctx: ExecutionContext) -> InternalAgentResponse:
-        raise NotImplementedError
-
-    @staticmethod
-    def deploy(deployement: InternalAgentDeployement, ctx: ExecutionContext) -> InternalAgentResponse:
-        raise NotImplementedError
-
-    @staticmethod
-    def call(calldata: InternalAgentCalldata, ctx: ExecutionContext) -> InternalAgentResponse:
-        raise NotImplementedError
-
-    @staticmethod
     def process_tx(state: State, tx: ITransaction) -> Receipt:
         raise NotImplementedError

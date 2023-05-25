@@ -43,6 +43,7 @@ RECEIVE_REQUEST_BLOCKS_HEADERS = "receive_request_blocks_header"
 REQUEST_BLOCK_ENDORSEMENT = "request_block_endorsement"
 ACCEPT_BLOCK_ENDORSEMENT = "accept_block_endorsement"
 DENY_BLOCK_ENDORSEMENT = "deny_block_endorsement"
+RECEIVE_BLOCK_ENDORSEMENT = "receive_block_endorsement"
 
 # Transaction diffusion events
 CREATE_TRANSACTION = "create_transaction"
@@ -52,6 +53,7 @@ RECEIVE_TRANSACTION = "receive_transaction"
 REQUEST_TRANSACTION_ENDORSEMENT = "request_transaction_endorsement"
 ACCEPT_TRANSACTION_ENDORSEMENT = "accept_transaction_endorsement"
 DENY_TRANSACTION_ENDORSEMENT = "deny_transaction_endorsement"
+RECEIVE_TRANSACTION_ENDORSEMENT = "receive_transaction_endorsement"
 
 # Simulation events
 INIT = "init"
@@ -59,6 +61,10 @@ PAUSE_SIMULATION = "pause_simulation"
 RESTART_SIMULATION = "restart_simulation"
 STOP_SIMULATION = "stop_simulation"
 CLEANUP = "cleanup"
+
+# Protocol events
+NEXT_EPOCH = "next_epoch"
+NEXT_SLOT = "next_slot"
 
 # Schedulable events
 RUN_SCHEDULABLE = "run_schedulable"

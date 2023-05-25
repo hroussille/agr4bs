@@ -3,11 +3,9 @@
     Block file class implementation
 """
 
-import hashlib
-import pickle
-from ....common import Serializable
 from .transaction import Transaction
 from ....blockchain import IBlockHeader, IBlock
+from .attestation import Attestation
 
 
 class BlockHeader(IBlockHeader):
@@ -17,7 +15,7 @@ class BlockHeader(IBlockHeader):
     """
 
     def __init__(self,  parent_hash: str, creator: str, hash: str) -> None:
-        super().__init__(parent_has, creator, hash)
+        super().__init__(parent_hash, creator, hash)
 
 
 class Block(IBlock):
@@ -32,12 +30,64 @@ class Block(IBlock):
         the status of the block
     """
 
-    def __init__(self, parent_hash: str, creator: str, transactions: list[Transaction] = None) -> None:
+    def __init__(self, parent_hash: str, creator: str, slot: int, transactions: list[Transaction] = None) -> None:
 
         super().__init__(parent_hash, creator, transactions)
 
-        self.justified = False
-        self.finalized = False
-        self.attestations = {}
+        self._justified = False
+        self._finalized = False
+        self._slot = slot
+        self._attestations = []
 
+    @property
+    def justified(self) -> bool:
+        """
+            Get the justified status of the Block
+        """
+        return self._justified
+
+    @justified.setter
+    def justified(self, value: bool) -> None:
+        """
+            Set the justified status of the Block
+        """
+        self._justified = value
+
+    @property
+    def finalized(self) -> bool:
+        """
+            Get the finalized status of the Block
+        """
+        return self._finalized
+    
+    @property
+    def slot(self) -> int:
+        """
+            Get the slot of the Block
+        """
+        return self._slot
+        
+    @finalized.setter
+    def finalized(self, value: bool) -> None:
+        """ 
+            Set the finalized status of the Block
+        """
+        self._finalized = value
+
+    @property
+    def attestations(self) -> dict:
+        """
+            Get the attestations of the Block
+        """
+        return self._attestations
+
+    def add_attestation(self, attestation: Attestation) -> None:
+        """
+            Add an attestation to the Block
+        """
+        if attestation not in self._attestations: 
+            self._attestations.append(attestation)
+            return
+
+        raise ValueError("Dupplicated attestation for agent " + attestation.agent_name)       
 

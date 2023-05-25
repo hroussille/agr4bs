@@ -3,6 +3,7 @@
 """
 import copy
 import datetime
+import pickle
 
 from collections import defaultdict
 from typing import Union
@@ -24,7 +25,7 @@ class ExternalAgent(Agent):
         It may contribute to the system or simply interact with it autonomously.
     """
 
-    def __init__(self, name: str, genesis: IBlock, factory: 'Factory'):
+    def __init__(self, name: str, genesis: IBlock, factory: 'IFactory'):
 
         super().__init__(name, AgentType.EXTERNAL_AGENT)
 
@@ -110,11 +111,10 @@ class ExternalAgent(Agent):
             Core event handler : RUN_SCHEDULABLE
             Run a scheduled behavior
         """
-
         if behavior_name in agent._schedulables:
             schedulable = agent._schedulables[behavior_name]
             schedulable.handler(agent)
-            agent._schedule_behavior(behavior_name, schedulable.frequency)
+            agent.schedule_behavior(behavior_name, schedulable.frequency)
 
     def fire_event(self, event, *args, **kwargs):
         """
@@ -132,7 +132,7 @@ class ExternalAgent(Agent):
             to = [to]
 
         for recipient in to:
-            _message = copy.copy(message)
+            _message = pickle.loads(pickle.dumps(message, -1))
             _message.recipient = recipient
             _message.date = self._date
             self._network.send_message(_message, no_drop=no_drop)
@@ -163,13 +163,13 @@ class ExternalAgent(Agent):
         self.fire_event(RECEIVE_MESSAGE, message.origin)
         self.fire_event(message.event, *message.data)
 
-    def _schedule_behavior(self, behavior_name: str, frequency: datetime.timedelta):
+    def schedule_behavior(self, behavior_name: str, frequency: datetime.timedelta):
         message = RunSchedulable(self.name, behavior_name)
         self.send_system_message(message, self.name, delay=frequency)
 
     def _init_schedulables(self):
         for behavior_name, schedulable in self._schedulables.items():
-            self._schedule_behavior(behavior_name, schedulable.frequency)
+            self.schedule_behavior(behavior_name, schedulable.frequency)
 
     def init(self, date):
         """

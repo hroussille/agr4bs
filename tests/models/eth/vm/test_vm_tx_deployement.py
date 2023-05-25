@@ -81,7 +81,7 @@ def test_deploy_with_constructor():
     state.apply_batch_state_change(changes)
 
     payload = Payload(InternalAgentDeployement(internal_agent).serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", None, 0, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", None, 0, payload=payload)
     vm = agr4bs.models.eth.VM()
 
     receipt = vm.process_tx(state.copy(), tx)
@@ -98,7 +98,7 @@ def test_deploy_with_constructor():
     assert state.get_account_nonce("account_1") == 0
 
     payload = Payload(InternalAgentCalldata("custom_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1", 1, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1", 1, payload=payload)
 
     receipt = vm.process_tx(state.copy(), tx)
 
@@ -120,7 +120,7 @@ def test_deploy_without_constructor():
     state.apply_batch_state_change(changes)
 
     payload = Payload(InternalAgentDeployement(internal_agent).serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", None, 0, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", None, 0, payload=payload)
     vm = agr4bs.models.eth.VM()
 
     receipt = vm.process_tx(state.copy(), tx)
@@ -135,7 +135,7 @@ def test_deploy_without_constructor():
     assert state.get_account_nonce("account_1") == 0
 
     payload = Payload(InternalAgentCalldata("custom_function").serialize())
-    tx = agr4bs.models.eth.Transaction("account_0", "account_1", 1, payload=payload)
+    tx = agr4bs.models.eth1.Transaction("account_0", "account_1", 1, payload=payload)
 
     receipt = vm.process_tx(state.copy(), tx)
 

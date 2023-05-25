@@ -3,7 +3,6 @@
     Blockchain file class implementation
 """
 
-import random
 from collections import defaultdict, deque
 from .block import IBlock
 
@@ -135,6 +134,16 @@ class IBlockchain():
                 path.appendleft(self._blocks[child.hash])
 
             if child.parent_hash != parent.hash:
+                
+                current = self._head
+
+                while True:
+
+                    if (current.hash == self.genesis.hash):
+                        break
+
+                    current = self._blocks[current.parent_hash]
+
                 raise ValueError("Not path between blocks")
 
         if include_parent:

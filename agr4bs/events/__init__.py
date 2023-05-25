@@ -38,3 +38,7 @@ from .events import CREATE_TRANSACTION
 from .events import RUN_SCHEDULABLE
 from .events import REQUEST_BLOCK_HEADER
 from .events import RECEIVE_BLOCK_HEADER
+from .events import RECEIVE_BLOCK_ENDORSEMENT
+from .events import RECEIVE_TRANSACTION_ENDORSEMENT
+from .events import NEXT_EPOCH
+from .events import NEXT_SLOT
