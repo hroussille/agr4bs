@@ -9,7 +9,7 @@ ExternalAgent context when the Role is mounted and unmounted.
 """
 
 from collections import defaultdict
-import logging
+import math
 
 from ....events.events import INIT
 from ....state.account import Account
@@ -48,9 +48,14 @@ class BlockchainMaintainerContextChange(ContextChange):
         self.epoch = -1
         self.slot = 0
 
-        # The validators balances for each epoch
-        self.validators_balances = []
-        self.validators = []
+        # The current validators list
+        self.validators = {}
+
+        # The historical validator base rewards
+        self.base_rewards = {}
+
+        # The historical total effective balance
+        self.total_effective_balance = {}
 
         # Wether or not we are an attester in the current slot
         self.attester = False
@@ -65,6 +70,19 @@ class BlockchainMaintainerContextChange(ContextChange):
         # The attestations that are included in what we consider as
         # the main chain divided by epoch
         self.included_attestations_per_epoch = defaultdict(lambda: [])
+
+        # If the effective balance of a validator is below this value it will be kicked out
+        self.minimum_effective_balance = 16 * 10 ** 18
+
+        # Rewards configuration
+        self.base_reward_factor = 64
+        self.base_reward_per_epoch = 4
+        self.timely_source_weight = 14
+        self.timely_target_weight = 26
+        self.timely_head_weight = 14
+        self.sync_reward_weight = 2
+        self.proposer_weight = 8
+
 
     @staticmethod
     def init_vm(context: Context):
@@ -200,6 +218,9 @@ class BlockchainMaintainer(Role):
 
         agent.append_block(block)
 
+        # Give the block reward to the block proposer
+        agent.context['validators'][block.creator] += agent.context['base_rewards'][block.slot // 32][block.creator] * 8 / 60
+
         # The block is valid, we can clear our local list of attestations
         # As they are now included in the blockchain.
         for attestation in block.attestations:
@@ -234,6 +255,8 @@ class BlockchainMaintainer(Role):
         # LMD GHOST rule for head selection
         if agent.context['slot'] - attestation.slot <= 32:
             agent.context['latest_messages'][attestation.agent_name] = attestation
+            # Process the timely head weight vote
+            agent.context['validators'][attestation.agent_name] += agent.context['base_rewards'][attestation.epoch][attestation.agent_name]  * 14 / 60
         else:
             return
         
@@ -252,12 +275,6 @@ class BlockchainMaintainer(Role):
             return
 
         agent.context['pending_attestations'].append(attestation)
-        #latest_messages = list(agent.context['latest_messages'].values())
-
-        # Processing the latest messages up to that point may yield a new head
-        # If this is a case we need to reorg the chain right now
-        # reverted_blocks, added_blocks = agent.context['blockchain'].process_block_votes(latest_messages)
-        # agent.reorg(reverted_blocks, added_blocks)
 
     @staticmethod
     @on(NEXT_SLOT)
@@ -277,19 +294,32 @@ class BlockchainMaintainer(Role):
     @staticmethod
     @on(NEXT_EPOCH)
     @export
-    def next_epoch(agent: ExternalAgent, epoch: int, validators: list[str]):
+    def next_epoch(agent: ExternalAgent, epoch: int, new_validators: list[str]):
         """
             Update the epoch and the validator balances for the next epoch
         """
-
         assert epoch == agent.context['epoch'] + 1
-        assert len(validators) >= 32
-
         agent.context['epoch'] = epoch
-        agent.context['validators_balances'].append({k: 1 for k in validators})
-        agent.context['validators'].append(validators)
-
+        
         agent.process_epoch_checkpoint_votes(epoch - 1)
+
+        current_validators = list(agent.context['validators'].keys())
+
+        # Kick out validators that have less than the minimum balance
+        for validator in current_validators:
+            if agent.context['validators'][validator] < agent.context['minimum_effective_balance']:
+                del agent.context['validators'][validator]
+
+        # Add the new validators to the validator set
+        for new_validator in new_validators:
+            agent.context['validators'][new_validator] = 32 * 10 ** 18
+        
+        # Update the historical total effective balance
+        agent.context['total_effective_balance'][epoch] = sum(agent.context['validators'].values())
+
+        # Compute the new epoch base rewards for all validators in the current epoch
+        agent.context['base_rewards'][epoch] = {k: agent.compute_base_reward(k) for k in agent.context['validators']}
+
         
     @staticmethod
     @export
@@ -297,15 +327,27 @@ class BlockchainMaintainer(Role):
         """
             Compute the voting power allocated to a specific link source -> target for a given epoch
         """
+
         included_attestations = agent.context['included_attestations_per_epoch'][epoch]
 
         def predicate(attestation: Attestation):
-            return attestation.source == source.hash and attestation.target == target.hash
-        
-        filtered_attestations = list(filter(predicate, included_attestations))
-        shares =  len(filtered_attestations) / len(agent.context['validators'][epoch])
+            validator = attestation.agent_name
 
-        return shares
+            if (validator not in agent.context['validators']):
+                return False
+            
+            if (agent.context['validators'][validator] < agent.context['minimum_effective_balance']):
+                return False
+
+            return attestation.source == source.hash and attestation.target == target.hash
+
+        filtered_attestations = list(filter(predicate, included_attestations))
+
+        # Compute the total shares for the given source -> target link
+        shares = sum([agent.context['validators'][attestation.agent_name] for attestation in filtered_attestations])
+
+        # Return the shares divided by the total effective balance for the given epoch
+        return shares / agent.context['total_effective_balance'][epoch]
 
     @staticmethod
     @export
@@ -326,12 +368,12 @@ class BlockchainMaintainer(Role):
             # If source -> target is voted by 2/3 of the validators balance then we justify it
             if agent.compute_votes_shares(source, target, epoch) >= 2/3:
 
-                print(f"Agent {agent.name} justified block {target.hash} at epoch {epoch}")
+                #print(f"Agent {agent.name} justified block {target.hash} at epoch {epoch}")
                 agent.context['blockchain'].justify_block(target)
 
                 # If source was justified, it must be finalized
                 if source.justified is True:
-                    print(f"Agent {agent.name} finalized block {source.hash} at epoch {epoch}")
+                    #print(f"Agent {agent.name} finalized block {source.hash} at epoch {epoch}")
                     agent.context['blockchain'].finalize_block(source)
 
         if epoch >= 2:
@@ -354,6 +396,38 @@ class BlockchainMaintainer(Role):
 
             if a.justified and b.justified and agent.compute_votes_shares(a, c, epoch - 1) >= 2/3:
                 agent.context['blockchain'].finalize_block(a)
+
+        epoch_attestations = agent.context['included_attestations_per_epoch'][epoch]
+        validator_attestations = {k: [] for k in agent.context['validators']}
+
+        for attestation in epoch_attestations:
+            validator_attestations[attestation.agent_name].append(attestation)
+
+        for validator in agent.context['validators']:
+
+            # If we don't pass this assertion then we have a bug in the code
+            # As a dupplicated attestation should be refused by the network
+            assert len(validator_attestations[validator]) <= 1
+
+            reward = 0
+
+            # Penalty for not attesting in the current epoch
+            if len(validator_attestations[validator]) == 0:
+                reward = -30
+                # TODO: Delay this computation by one slot to avoid missing attestations ?
+                continue
+            
+            # Reward for attesting  with a correct source
+            if validator_attestations[validator][0].source == source.hash:
+                reward = reward + 14
+
+            # Reward for attesting with a correct target
+            if validator_attestations[validator][0].target == target.hash:
+                reward = reward + 26
+            
+            agent.context['validators'][validator] += agent.context['base_rewards'][epoch][validator] * reward / 60
+
+
 
         
     @staticmethod
@@ -518,13 +592,13 @@ class BlockchainMaintainer(Role):
             # If the head changed then we added on the main chain
             # If the head did not change then we added on a side chain that may become the main chain
             if head_changed is False:
-                #agent.reorg(reverted_blocks, added_blocks)
 
                 latest_messages = list(agent.context['latest_messages'].values())
 
                 # Processing the latest messages up to that point may yield a new head
                 # If this is a case we need to reorg the chain right now
                 reverted_blocks, added_blocks = agent.context['blockchain'].process_block_votes(latest_messages)
+
             else:
                 for attestation in block.attestations:
                     if attestation in agent.context['attestations']:
@@ -532,6 +606,12 @@ class BlockchainMaintainer(Role):
                     
                     # Register the attestation as part of the local main chain
                     agent.context['included_attestations_per_epoch'][attestation.epoch].append(attestation)
+
+                    # Add the inclusion delay rewards
+                    delay = abs(block.slot - attestation.epoch)
+                    base_reward = agent.context['base_rewards'][block.slot // 32][attestation.agent_name]
+
+                    agent.context['validators'][attestation.agent_name] += base_reward * (1 / delay)
 
             # Execute the transactions
             agent.reorg(reverted_blocks, added_blocks)
@@ -600,11 +680,9 @@ class BlockchainMaintainer(Role):
             agent.discard_transaction(tx)
 
         if agent.context['state'].get_account(block.creator) is None:
-            change = CreateAccount(Account(block.creator, 10))
-        else:
-            change = AddBalance(block.creator, 10)
-
-        agent.context["state"].apply_state_change(change)
+            change = CreateAccount(Account(block.creator, 0))
+            agent.context["state"].apply_state_change(change)
+        
         agent.context["blockchain"].head = block
 
         return True
@@ -619,10 +697,6 @@ class BlockchainMaintainer(Role):
             :returns: wether the Block was reversed successfully or not
             :rtype: bool
         """
-
-        agent.context["state"].apply_state_change(
-            RemoveBalance(block.creator, 10))
-
         for tx in reversed(block.transactions):
 
             # Reverse the transaction
@@ -675,3 +749,22 @@ class BlockchainMaintainer(Role):
         agent.context['state'].apply_batch_state_change(changes)
 
         return True
+    
+    @staticmethod
+    @export
+    def compute_base_reward(agent: ExternalAgent, validator: str) -> int:
+        """
+            Compute the base reward for a given validator
+
+            :param validator: the validator to compute the base reward for
+            :type validator: str
+            :returns: the base reward for the given validator at the current epoch
+            :rtype: int
+        """
+        base_reward_factor = agent.context['base_reward_factor']
+        base_reward_per_epoch = agent.context['base_reward_per_epoch']
+        effective_balance = agent.context['validators'][validator]
+        total_effective_balance = agent.context['total_effective_balance'][agent.context['epoch']]
+
+        return int(effective_balance * (base_reward_factor / (base_reward_per_epoch * math.sqrt(total_effective_balance))))
+

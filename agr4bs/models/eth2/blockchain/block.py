@@ -3,10 +3,9 @@
     Block file class implementation
 """
 
-from .transaction import Transaction
 from ....blockchain import IBlockHeader, IBlock
 from .attestation import Attestation
-
+from .transaction import Transaction
 
 class BlockHeader(IBlockHeader):
 

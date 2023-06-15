@@ -101,6 +101,8 @@ def test_blockchain_maintainer_receive_attestation():
     agent.add_role(agr4bs.roles.Peer())
     agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
 
+    agent.next_epoch(0, ["agent_0"])
+
     root = genesis.hash
     source = genesis.hash
     target = genesis.hash
@@ -123,6 +125,8 @@ def test_blockchain_maintainer_merge_pending_attestations():
     agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.models.eth2.Factory)
     agent.add_role(agr4bs.roles.Peer())
     agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
+
+    agent.next_epoch(0, ["agent_0", "agent_1"])
 
     root = genesis.hash
     source = genesis.hash

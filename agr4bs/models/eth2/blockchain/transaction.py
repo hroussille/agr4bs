@@ -3,9 +3,6 @@
     Transaction file class implementation
 """
 
-import hashlib
-import pickle
-
 from ....blockchain import ITransaction, Payload
 
 class Transaction(ITransaction):

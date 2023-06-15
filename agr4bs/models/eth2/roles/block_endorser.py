@@ -100,6 +100,6 @@ class BlockEndorser(Role):
         target = blockchain.get_checkpoint_from_epoch(agent.context['epoch'])
 
         attestation = Attestation(agent.name, agent.context['epoch'], agent.context['slot'], agent.context['index'], root.hash, source.hash, target.hash)
-        validators = agent.context['validators'][agent.context['epoch']]
+        validators = list(agent.context['validators'].keys())
         
         agent.send_message(DiffuseBlockEndorsement(agent.name, attestation), validators)

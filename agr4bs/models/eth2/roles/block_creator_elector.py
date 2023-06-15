@@ -75,7 +75,15 @@ class BlockCreatorElector(Role):
 
         agent.context['block_proposers'] = proposers
 
-        agent.send_system_message(NextEpoch(agent.name, agent.context['epoch'], agent.agents_names), agent.agents_names)
+        # By default we don't add any new validators on epoch boundary
+        new_validators = []
+
+        # If we are at the first epoch, we add all agents as validators
+        # This populates the initial state
+        if (agent.context['epoch'] == 0):
+            new_validators = agent.agents_names
+
+        agent.send_system_message(NextEpoch(agent.name, agent.context['epoch'], new_validators), agent.agents_names)
 
     @staticmethod
     @export
