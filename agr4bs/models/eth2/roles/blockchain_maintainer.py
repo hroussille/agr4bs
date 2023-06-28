@@ -20,8 +20,10 @@ from ....state import State, Receipt
 from ....network.messages import DiffuseBlock, DiffuseTransaction, RequestBlockEndorsement, DiffuseBlockEndorsement
 from ....roles import Role, RoleType
 from ....common import on, export
-from ..blockchain import Block, Transaction, Attestation
+from ..blockchain import Block, Transaction, Attestation, Blockchain
 from ..factory import Factory
+from ..consensus import BeaconState
+from ..constants import SLOTS_PER_EPOCH, INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE, INACTIVITY_PENALTY_QUOTIENT_BELLATRIX, EFFECTIVE_BALANCE_INCREMENT, PARTICIPATION_FLAG_WEIGHTS, WEIGHT_DENOMINATOR, PROPOSER_WEIGHT, TIMELY_TARGET_FLAG_INDEX, TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, JUSTIFICATION_BITS_LENGTH, MIN_ATTESTATION_INCLUSION_DELAY
 
 
 class BlockchainMaintainerContextChange(ContextChange):
@@ -48,14 +50,8 @@ class BlockchainMaintainerContextChange(ContextChange):
         self.epoch = -1
         self.slot = 0
 
-        # The current validators list
-        self.validators = {}
-
-        # The historical validator base rewards
-        self.base_rewards = {}
-
-        # The historical total effective balance
-        self.total_effective_balance = {}
+        # Beacon state dict indexed by block hash
+        self.beacon_states = {} # type: dict[str, BeaconState]
 
         # Wether or not we are an attester in the current slot
         self.attester = False
@@ -67,21 +63,8 @@ class BlockchainMaintainerContextChange(ContextChange):
         # Those will be unlocked at the next slot
         self.pending_attestations = []
 
-        # The attestations that are included in what we consider as
-        # the main chain divided by epoch
+        # The attestations that are included in the chain (main chain or fork)
         self.included_attestations_per_epoch = defaultdict(lambda: [])
-
-        # If the effective balance of a validator is below this value it will be kicked out
-        self.minimum_effective_balance = 16 * 10 ** 18
-
-        # Rewards configuration
-        self.base_reward_factor = 64
-        self.base_reward_per_epoch = 4
-        self.timely_source_weight = 14
-        self.timely_target_weight = 26
-        self.timely_head_weight = 14
-        self.sync_reward_weight = 2
-        self.proposer_weight = 8
 
 
     @staticmethod
@@ -102,6 +85,15 @@ class BlockchainMaintainerContextChange(ContextChange):
         genesis: Block = context['genesis']
 
         return factory.build_blockchain(genesis)
+    
+    @staticmethod
+    def init_beacon_state(context: Context):
+        """
+            Initialize the beacon state
+        """
+        genesis: Block = context['genesis']
+
+        return BeaconState(genesis)
 
     @staticmethod
     def init_state(context: Context):
@@ -162,9 +154,8 @@ class BlockchainMaintainer(Role):
         """
 
         genesis = agent.context['blockchain'].genesis
-
-        for tx in genesis.transactions:
-            agent.execute_transaction(tx)
+        agent.context['beacon_states'][genesis.hash] = BeaconState(genesis)
+        agent.execute_block(genesis)
 
     @staticmethod
     @export
@@ -208,37 +199,354 @@ class BlockchainMaintainer(Role):
         block = block.from_serialized(block.serialize())
         block_hash = block.compute_hash()
 
-        # Block is already known
-        if agent.context['blockchain'].get_block(block_hash):
+        # Block is already known￼
+        if agent.context['blockchain'].get_block(block_hash) is not None:
             return
 
-        # Skip invalid blocks
+        # Block is invalid
         if agent.validate_block(block) is False:
             return
 
+        # Create a new beacon state from the parent state
+        state: BeaconState = agent.context['beacon_states'][block.parent_hash].copy()
+        state.update_latest_block(block)
+        state = agent.process_slots(state, block.slot)
+        
+        # Append the block to the blockchain
         agent.append_block(block)
 
-        # Give the block reward to the block proposer
-        agent.context['validators'][block.creator] += agent.context['base_rewards'][block.slot // 32][block.creator] * 8 / 60
-
-        # The block is valid, we can clear our local list of attestations
-        # As they are now included in the blockchain.
-        for attestation in block.attestations:
-
-            if attestation in agent.context['attestations']:
-                agent.context['attestations'].remove(attestation)
-
-            if attestation in agent.context['pending_attestations']:
-                agent.context['pending_attestations'].remove(attestation)
+        # Process the block attestations
+        agent.process_attestations(block, state)
 
         # Diffuse the block to the outbound peers
         outbound_peers = list(agent.context['outbound_peers'])
         agent.send_message(DiffuseBlock(agent.name, block), outbound_peers)
         
+        # Store the new beacon state
+        agent.context['beacon_states'][block_hash] = state
+
         # Trigger the endorsement policy if required
         if agent.context['attester']:
+            ##print("Triggering endorsement policy for", agent.name, "on block", block_hash, "slot", block.slot)
             agent.send_system_message(RequestBlockEndorsement(agent.name), agent.name)
 
+    @staticmethod
+    @export
+    def process_attestations(agent: ExternalAgent, block: Block, state: BeaconState):
+        """
+            Process the attestations included in the given block
+        """           
+        for attestation in block.attestations:
+            agent.process_attestation(attestation, state)
+
+            if attestation in agent.context['attestations']:
+                agent.context['attestations'].remove(attestation)
+
+    @staticmethod
+    @export
+    def process_attestation(agent: ExternalAgent, attestation: Attestation, state: BeaconState):
+        """
+            Process the attestations included in the given block
+        """
+
+        target = agent.context['blockchain'].get_block(attestation.target)
+        target_epoch = target.slot // SLOTS_PER_EPOCH
+
+        assert target is not None
+        assert target_epoch in (state.previous_epoch(), state.current_epoch())
+        assert attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation.slot + SLOTS_PER_EPOCH
+              
+        # Participation flag indices
+        participation_flag_indices = agent.get_attestation_participation_flag_indices(state, attestation, state.slot - attestation.slot)
+
+        # Update epoch participation flags
+        if target_epoch == state.current_epoch():
+            epoch_participation = state.current_epoch_participation
+        else:
+            epoch_participation = state.previous_epoch_participation
+
+        proposer_reward_numerator = 0
+
+        def has_flag(participation, flag):
+            bit_flag = 2 ** flag
+            return participation & bit_flag == bit_flag
+        
+        def add_flag(participation, flag):
+            bit_flag = 2 ** flag
+            return participation | bit_flag
+
+        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
+
+            if attestation.agent_name not in epoch_participation:
+                epoch_participation[attestation.agent_name] = 0
+
+            if flag_index in participation_flag_indices and not has_flag(epoch_participation[attestation.agent_name], flag_index):
+                epoch_participation[attestation.agent_name] = add_flag(epoch_participation[attestation.agent_name], flag_index)
+                proposer_reward_numerator += state.get_base_reward(attestation.agent_name) * weight
+
+        # Reward proposer
+        proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
+
+        # TODO: Check if this is correct ( Gwei )
+        proposer_reward = proposer_reward_numerator // proposer_reward_denominator
+
+        state.reward_validator(state.latest_block().creator, proposer_reward)
+
+    @staticmethod
+    @export
+    def get_attestation_participation_flag_indices(agent: ExternalAgent, state: BeaconState, attestation: Attestation, inclusion_delay: int) -> list[int]:
+        """
+        Return the flag indices that are satisfied by an attestation.
+        """
+
+        target = agent.context['blockchain'].get_block(attestation.target)
+        target_epoch = target.slot // SLOTS_PER_EPOCH
+
+        if target_epoch == state.current_epoch():
+            justified_checkpoint = state.current_justified_checkpoint()
+        else:
+            justified_checkpoint = state.previous_justified_checkpoint()
+
+
+        expected_target = agent.context['blockchain'].get_checkpoint_from_epoch(target_epoch, state.latest_block())
+        expected_head = agent.context['blockchain'].get_block_for_slot(attestation.slot, state.latest_block())
+
+        # Matching roots
+        is_matching_source = attestation.source == justified_checkpoint.hash
+        is_matching_target = is_matching_source and attestation.target == expected_target.hash
+        is_matching_head = is_matching_target and attestation.root == expected_head.hash
+
+        assert is_matching_source
+
+        participation_flag_indices = []
+        if is_matching_source and inclusion_delay <= int(math.sqrt((SLOTS_PER_EPOCH))):
+            participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
+        if is_matching_target and inclusion_delay <= SLOTS_PER_EPOCH:
+            participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
+        if is_matching_head and inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
+            participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
+
+        return participation_flag_indices
+
+    @staticmethod
+    @export
+    def get_inactivity_penalty_deltas(agent: ExternalAgent, state: BeaconState) -> tuple[list[int], list[int]]:
+        """
+        Return the inactivity penalty deltas by considering timely target participation flags and inactivity scores.
+        """
+        rewards = { validator: 0 for validator in state.validators }
+        penalties = { validator: 0 for validator in state.validators }
+        previous_epoch = state.previous_epoch()
+        matching_target_indices = state.get_participation(previous_epoch, TIMELY_TARGET_FLAG_INDEX)
+        for validator in state.get_eligible_validators():
+            if validator not in matching_target_indices:
+                penalty_numerator = state.effective_balances[validator] * state.inactivity_scores[validator]
+                penalty_denominator = INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_BELLATRIX
+                penalties[validator] += penalty_numerator // penalty_denominator
+
+        return rewards, penalties
+
+    @staticmethod
+    @export
+    def process_rewards_and_penalties(agent: ExternalAgent, state: BeaconState) -> None:
+        """
+        Processes the rewards and penalties at the end of the epoch.
+        """
+        
+        # No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
+        if state.current_epoch() == 0:
+            return
+
+        flag_deltas = [agent.get_flag_index_deltas(state, flag_index) for flag_index in range(len(PARTICIPATION_FLAG_WEIGHTS))]
+
+        deltas = flag_deltas + [agent.get_inactivity_penalty_deltas(state)]
+
+        for (rewards, penalties) in deltas:
+            for validator in state.validators:
+                state.reward_validator(validator, rewards[validator])
+                state.penalize_validator(validator, penalties[validator])
+
+    @staticmethod
+    @export
+    def get_flag_index_deltas(agent: ExternalAgent, state: BeaconState, flag_index: int) -> tuple[list[int], list[int]]:
+        """
+        Return the deltas for a given ``flag_index`` by scanning through the participation flags.
+        """
+        previous_epoch = state.previous_epoch()
+        rewards = { validator: 0 for validator in state.validators }
+        penalties = { validator: 0 for validator in state.validators }
+
+        unslashed_validators = state.get_participation(previous_epoch, flag_index)
+
+        weight = PARTICIPATION_FLAG_WEIGHTS[flag_index]
+
+        unslashed_participating_balance = state.get_group_effective_balance(unslashed_validators)
+        unslashed_participating_increments = unslashed_participating_balance // EFFECTIVE_BALANCE_INCREMENT
+        active_increments = state.get_total_effective_balance() // EFFECTIVE_BALANCE_INCREMENT
+
+        for validator in state.get_eligible_validators():
+            base_reward = state.get_base_reward(validator)
+            if validator in unslashed_validators:
+                if not state.is_in_inactivity_leak():
+                    reward_numerator = base_reward * weight * unslashed_participating_increments
+                    rewards[validator] += reward_numerator // (active_increments * WEIGHT_DENOMINATOR)
+
+            elif flag_index != TIMELY_HEAD_FLAG_INDEX:
+                penalties[validator] += base_reward * weight // WEIGHT_DENOMINATOR
+
+        return rewards, penalties
+
+    @staticmethod
+    @export
+    def process_slots(agent: ExternalAgent, state: BeaconState, slot: int):
+        """
+            Fast forwards a parent state to the given slot and processes the epoch on the start slot of the next epoch
+        """
+        assert state.slot < slot
+
+        while state.slot < slot:
+            # Process epoch on the start slot of the next epoch
+            if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+                agent.process_epoch(state)
+
+            state.slot = state.slot + 1
+
+        return state
+    
+    @staticmethod
+    @export
+    def process_epoch(agent: ExternalAgent, state: BeaconState):
+        """
+            Process the epoch given the current state
+        """
+        agent.process_justification_and_finalization(state)
+        agent.process_inactivity_updates(state)  # [New in Altair]
+        agent.process_rewards_and_penalties(state)
+        # agent.process_registry_updates(state)
+        # agent.process_slashings(state)  # [Modified in Altair]
+        state.process_effective_balance_updates()
+        state.process_participation_flag_updates()
+
+    @staticmethod
+    @export
+    def process_justification_and_finalization(agent: ExternalAgent, state: BeaconState):
+        """
+            Process the justification and finalization of the given state
+        """
+        
+        # Skip the first epoch as it cannot be justified
+        if state.current_epoch() <= 1:
+            return
+        
+        previous_participants = state.get_participation(state.previous_epoch(), TIMELY_TARGET_FLAG_INDEX)
+        current_participants = state.get_participation(state.current_epoch(), TIMELY_TARGET_FLAG_INDEX)
+        total_active_balance = state.get_total_effective_balance()
+
+        previous_target_balance = state.get_group_effective_balance(previous_participants)
+        current_target_balance = state.get_group_effective_balance(current_participants)
+
+        agent.weight_justification_and_finalization(state, total_active_balance, previous_target_balance, current_target_balance)
+
+    @staticmethod
+    @export
+    def weight_justification_and_finalization(agent: ExternalAgent, state: BeaconState, total_active_balance: int, previous_epoch_target_balance: int, current_epoch_target_balance: int):
+        """
+            Weight the justification and finalization of the given state.
+        """
+        previous_epoch = state.previous_epoch()
+        current_epoch = state.current_epoch()
+
+        old_previous_justified_checkpoint = agent.context['blockchain'].get_block(state.previous_justified_checkpoint().hash)
+        old_current_justified_checkpoint = agent.context['blockchain'].get_block(state.current_justified_checkpoint().hash)
+
+        #old_previous_justified_checkpoint = state.previous_justified_checkpoint()
+        #old_current_justified_checkpoint = state.current_justified_checkpoint()
+
+        # Process justifications
+        state.update_previous_justified_checkpoint(state.current_justified_checkpoint())
+        state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]
+        state.justification_bits[0] = 0b0
+
+        if previous_epoch_target_balance * 3 >= total_active_balance * 2:
+            #print("JUSTIFYING PREVIOUS EPOCH")
+            checkpoint = agent.context['blockchain'].get_checkpoint_from_epoch(previous_epoch, state.latest_block())
+            agent.context['blockchain'].justify_block(checkpoint)
+            state.update_current_justified_checkpoint(checkpoint)
+            state.justification_bits[1] = 0b1
+
+        if current_epoch_target_balance * 3 >= total_active_balance * 2:
+            #print("JUSTIFYING CURRENT EPOCH")
+            checkpoint = agent.context['blockchain'].get_checkpoint_from_epoch(current_epoch, state.latest_block())
+            agent.context['blockchain'].justify_block(checkpoint)
+            state.update_current_justified_checkpoint(checkpoint)
+            state.justification_bits[0] = 0b1
+
+        # Process finalizations
+        bits = state.justification_bits
+        old_previous_justified_checkpoint_epoch = old_previous_justified_checkpoint.slot // SLOTS_PER_EPOCH
+        old_current_justified_checkpoint_epoch = old_current_justified_checkpoint.slot // SLOTS_PER_EPOCH
+
+        def cleanup_state(hash: str):
+
+            current_state = agent.context['beacon_states'][hash]
+
+            while current_state:
+                current_block = current_state.latest_block()
+                parent_block = agent.context['blockchain'].get_block(current_block.parent_hash)
+
+                if not parent_block:
+                    break
+
+                if parent_block.hash not in agent.context['beacon_states']:
+                    break
+
+                current_state = agent.context['beacon_states'][parent_block.hash]
+
+                del agent.context['beacon_states'][parent_block.hash]
+        
+        # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+        if all(bits[1:4]) and old_previous_justified_checkpoint_epoch + 3 == current_epoch:
+            state.update_finalized_checkpoint(old_previous_justified_checkpoint)
+        
+        # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+        if all(bits[1:3]) and old_previous_justified_checkpoint_epoch + 2 == current_epoch:
+            state.update_finalized_checkpoint(old_previous_justified_checkpoint)
+
+        # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+        if all(bits[0:3]) and old_current_justified_checkpoint_epoch + 2 == current_epoch:
+            state.update_finalized_checkpoint(old_current_justified_checkpoint)
+
+        # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+        if all(bits[0:2]) and old_current_justified_checkpoint_epoch + 1 == current_epoch:
+            state.update_finalized_checkpoint(old_current_justified_checkpoint)
+
+        cleanup_state(state.finalized_checkpoint().hash)
+        agent.context['blockchain'].finalize_block(state.finalized_checkpoint())
+    
+    @staticmethod
+    @export
+    def process_inactivity_updates(agent: ExternalAgent, state: BeaconState) -> None:
+        """
+            Update the validators innactivity scores based on their participation in the previous epoch
+        """
+
+        # Skip the genesis epoch as score updates are based on the previous epoch participation
+        if state.current_epoch() == 0:
+            return
+
+        timely_target_flags = state.get_participation(state.previous_epoch(), TIMELY_TARGET_FLAG_INDEX)
+
+        for validator in state.get_eligible_validators():
+
+            # Increase the inactivity score of inactive validators
+            if validator in timely_target_flags:
+                state.inactivity_scores[validator] -= min(1, state.inactivity_scores[validator])
+            else:
+                state.inactivity_scores[validator] += INACTIVITY_SCORE_BIAS
+            # Decrease the inactivity score of all eligible validators during a leak-free epoch
+            if not state.is_in_inactivity_leak():
+                state.inactivity_scores[validator] -= min(INACTIVITY_SCORE_RECOVERY_RATE, state.inactivity_scores[validator])
+                
     @staticmethod
     @export
     @on(RECEIVE_BLOCK_ENDORSEMENT)
@@ -251,184 +559,135 @@ class BlockchainMaintainer(Role):
             Attestations are only valid if they are included in a block
         """
 
-        # Overwrite the latest attestation from the same agent
-        # LMD GHOST rule for head selection
-        if agent.context['slot'] - attestation.slot <= 32:
-            agent.context['latest_messages'][attestation.agent_name] = attestation
-            # Process the timely head weight vote
-            agent.context['validators'][attestation.agent_name] += agent.context['base_rewards'][attestation.epoch][attestation.agent_name]  * 14 / 60
-        else:
-            return
-        
-        for key in list(agent.context['latest_messages'].keys()):
-                if agent.context['latest_messages'][key].slot < agent.context['slot'] - 32:
-                    del agent.context['latest_messages'][key]
-
         # This may be an issue if we receive an attestation AFTER it has been included in a block
         # by another agent (i.e. we receive the block before the attestation)
         # In this case we should validate if the attestation is known or not
         if attestation in agent.context['attestations'] or attestation in agent.context['pending_attestations']:
+            #print("Attestation is already known")
             return
+        
+        # Use the gossip validation rules
+        if not agent.validate_attestation(attestation, gossip=True):
+            #print("Attestation is not valid")
+            return
+    
+        # Overwrite the latest attestation from the same agent
+        # LMD GHOST rule for head selection 
+        agent.context['latest_messages'][attestation.agent_name] = attestation
+        
+        # Clear the latest messages that are too old
+        for key in list(agent.context['latest_messages'].keys()):
+                if agent.context['latest_messages'][key].slot < agent.context['slot'] - SLOTS_PER_EPOCH:
+                    del agent.context['latest_messages'][key]
         
         # The attestation is not pending, it is already included in the local chain
         if attestation in agent.context['included_attestations_per_epoch'][attestation.epoch]:
+            #print("Attestation is already included in the local chain")
             return
 
         agent.context['pending_attestations'].append(attestation)
 
     @staticmethod
+    @export
+    def validate_attestation(agent: ExternalAgent, attestation: Attestation, gossip: bool = False):
+        """
+            Validate an attestation
+        """
+
+        # The attestation is in a future slot.
+        # In gossip we allow attestations from the current slot
+        if attestation.slot > agent.context['slot'] or not gossip and attestation.slot == agent.context['slot']:
+            #print("Attestation is in the future")
+            return False
+
+        ##print("Attestation is in the past")
+
+        # The attestation is older than the maximum allowed
+        if attestation.slot < agent.context['slot'] - SLOTS_PER_EPOCH:
+            #print("Attestation from", attestation.agent_name , "is too old", attestation.slot, agent.context['slot'])
+            #print(attestation)
+            return False
+        
+        ##print("Attestation is not too old")
+
+        blockchain: Blockchain = agent.context['blockchain']
+        root = blockchain.get_block(attestation.root)
+        target_block = blockchain.get_block(attestation.target)
+        source_block = blockchain.get_block(attestation.source)
+
+        # In gossip, we may not have the blocks in our blockchain
+        if root is None and gossip is False:
+            #print("Attestation is refering to an unknown root")
+            return False
+        
+        # In gossip, we may not have the target block in our blockchain yet
+        # This can happen in the begining of epochs
+        if target_block is None and gossip is False:
+            #print("Attestation is refering to an unknown target")
+            return False
+        
+        if source_block is None:
+            #print("Attestation is refering to an unknown source")
+            return False
+
+        # The attestation is for a block that is not extending the finalized chain
+        if source_block.hash != blockchain.genesis.hash:
+            if not blockchain.is_close_parent(source_block, blockchain.last_finalized_block, abs(source_block.slot - blockchain.last_finalized_block.slot)):
+                #print("Last finalized : ", blockchain.last_finalized_block.hash, "height ", blockchain.last_finalized_block.height)
+                #print("Source : ", source_block.hash, "height ", source_block.height)
+                #print("Attestation is not extending the finalized chain")
+                return False
+
+        ##print("Attestation is extending the finalized chain")
+
+        current_checkpoint = blockchain.get_checkpoint_from_epoch(agent.context['epoch'], root)
+        previous_checkpoint = blockchain.get_checkpoint_from_epoch(max(agent.context['epoch'] - 1, 0), root)
+
+        # The attestation should be for the current or previous checkpoint according to the chain that is being built
+        if not gossip and attestation.target != current_checkpoint.hash and attestation.target != previous_checkpoint.hash:
+            #print("Invalid target !")
+            # #print(gossip)
+            # #print(attestation.slot)
+            # #print(agent.context['slot'])
+            # #print("Attestation is not for the current or previous checkpoint")
+            # #print("Current checkpoint : ", current_checkpoint.hash)
+            # #print("Previous checkpoint : ", previous_checkpoint.hash)
+            # #print("Attestation target : ", attestation.target)
+            return False
+
+        ##print("Attestation is for the current or previous checkpoint")
+
+        return True
+    
+    @staticmethod
     @on(NEXT_SLOT)
     @export
-    def merge_pending_attestations(agent: ExternalAgent, slot: int, attesters: list[str]):
+    def next_slot(agent: ExternalAgent, slot: int, attesters: list[str]):
         """
             Reset the attestation flag
         """
         assert slot == agent.context['slot'] + 1
         assert len(attesters) >= 1
 
+        # Register if the agent is an attester for the current slot
         agent.context['attester'] = agent.name in attesters
+
+        # Merge the pending attestations
         agent.context['attestations'] += agent.context['pending_attestations']
         agent.context['pending_attestations'] = []
+
+        # Update the slot
         agent.context['slot'] = slot
 
     @staticmethod
     @on(NEXT_EPOCH)
     @export
-    def next_epoch(agent: ExternalAgent, epoch: int, new_validators: list[str]):
+    def next_epoch(agent: ExternalAgent, epoch: int):
         """
             Update the epoch and the validator balances for the next epoch
         """
         assert epoch == agent.context['epoch'] + 1
         agent.context['epoch'] = epoch
-        
-        agent.process_epoch_checkpoint_votes(epoch - 1)
-
-        current_validators = list(agent.context['validators'].keys())
-
-        # Kick out validators that have less than the minimum balance
-        for validator in current_validators:
-            if agent.context['validators'][validator] < agent.context['minimum_effective_balance']:
-                del agent.context['validators'][validator]
-
-        # Add the new validators to the validator set
-        for new_validator in new_validators:
-            agent.context['validators'][new_validator] = 32 * 10 ** 18
-        
-        # Update the historical total effective balance
-        agent.context['total_effective_balance'][epoch] = sum(agent.context['validators'].values())
-
-        # Compute the new epoch base rewards for all validators in the current epoch
-        agent.context['base_rewards'][epoch] = {k: agent.compute_base_reward(k) for k in agent.context['validators']}
-
-        
-    @staticmethod
-    @export
-    def compute_votes_shares(agent: ExternalAgent, source: Block, target: Block, epoch: int):
-        """
-            Compute the voting power allocated to a specific link source -> target for a given epoch
-        """
-
-        included_attestations = agent.context['included_attestations_per_epoch'][epoch]
-
-        def predicate(attestation: Attestation):
-            validator = attestation.agent_name
-
-            if (validator not in agent.context['validators']):
-                return False
-            
-            if (agent.context['validators'][validator] < agent.context['minimum_effective_balance']):
-                return False
-
-            return attestation.source == source.hash and attestation.target == target.hash
-
-        filtered_attestations = list(filter(predicate, included_attestations))
-
-        # Compute the total shares for the given source -> target link
-        shares = sum([agent.context['validators'][attestation.agent_name] for attestation in filtered_attestations])
-
-        # Return the shares divided by the total effective balance for the given epoch
-        return shares / agent.context['total_effective_balance'][epoch]
-
-    @staticmethod
-    @export
-    def process_epoch_checkpoint_votes(agent: ExternalAgent, epoch: int):
-        """
-            Process the votes for the epoch checkpoint and justify / finalize blocks
-            as necessary
-        """
-        if epoch <= 0:
-            return
-
-        #source = agent.context['blockchain'].get_last_justified_block()
-        source = agent.context['blockchain'].last_justified_block
-        target = agent.context['blockchain'].get_checkpoint_from_epoch(epoch)
-
-        if epoch >= 1:
-
-            # If source -> target is voted by 2/3 of the validators balance then we justify it
-            if agent.compute_votes_shares(source, target, epoch) >= 2/3:
-
-                #print(f"Agent {agent.name} justified block {target.hash} at epoch {epoch}")
-                agent.context['blockchain'].justify_block(target)
-
-                # If source was justified, it must be finalized
-                if source.justified is True:
-                    #print(f"Agent {agent.name} finalized block {source.hash} at epoch {epoch}")
-                    agent.context['blockchain'].finalize_block(source)
-
-        if epoch >= 2:
-            b = agent.context['blockchain'].get_checkpoint_from_epoch(epoch - 2)
-            c = target
-            d = source
-
-            if b.justified:
-                if agent.compute_votes_shares(b, c, epoch - 1) >= 2/3:
-                    agent.context['blockchain'].finalize_block(b)
-                
-                if c.justified and agent.compute_votes_shares(b, d, epoch) >= 2/3:
-                    agent.context['blockchain'].finalize_block(b)
-
-        if epoch >= 3:
-            a = agent.context['blockchain'].get_checkpoint_from_epoch(epoch - 3)
-            b = agent.context['blockchain'].get_checkpoint_from_epoch(epoch - 2)
-            c = target
-            d = source
-
-            if a.justified and b.justified and agent.compute_votes_shares(a, c, epoch - 1) >= 2/3:
-                agent.context['blockchain'].finalize_block(a)
-
-        epoch_attestations = agent.context['included_attestations_per_epoch'][epoch]
-        validator_attestations = {k: [] for k in agent.context['validators']}
-
-        for attestation in epoch_attestations:
-            validator_attestations[attestation.agent_name].append(attestation)
-
-        for validator in agent.context['validators']:
-
-            # If we don't pass this assertion then we have a bug in the code
-            # As a dupplicated attestation should be refused by the network
-            assert len(validator_attestations[validator]) <= 1
-
-            reward = 0
-
-            # Penalty for not attesting in the current epoch
-            if len(validator_attestations[validator]) == 0:
-                reward = -30
-                # TODO: Delay this computation by one slot to avoid missing attestations ?
-                continue
-            
-            # Reward for attesting  with a correct source
-            if validator_attestations[validator][0].source == source.hash:
-                reward = reward + 14
-
-            # Reward for attesting with a correct target
-            if validator_attestations[validator][0].target == target.hash:
-                reward = reward + 26
-            
-            agent.context['validators'][validator] += agent.context['base_rewards'][epoch][validator] * reward / 60
-
-
-
         
     @staticmethod
     @export
@@ -508,9 +767,13 @@ class BlockchainMaintainer(Role):
             :returns: wether the block is valid or not
             :rtype: bool
         """
-
+        
         if block.compute_hash() != block.hash:
             return False
+        
+        for attestation in block.attestations:
+            if not agent.validate_attestation(attestation):
+                return False
 
         return True
 
@@ -596,22 +859,8 @@ class BlockchainMaintainer(Role):
                 latest_messages = list(agent.context['latest_messages'].values())
 
                 # Processing the latest messages up to that point may yield a new head
-                # If this is a case we need to reorg the chain right now
+                # If this is the case we need to reorg the chain right now
                 reverted_blocks, added_blocks = agent.context['blockchain'].process_block_votes(latest_messages)
-
-            else:
-                for attestation in block.attestations:
-                    if attestation in agent.context['attestations']:
-                        agent.context['attestations'].remove(attestation)
-                    
-                    # Register the attestation as part of the local main chain
-                    agent.context['included_attestations_per_epoch'][attestation.epoch].append(attestation)
-
-                    # Add the inclusion delay rewards
-                    delay = abs(block.slot - attestation.epoch)
-                    base_reward = agent.context['base_rewards'][block.slot // 32][attestation.agent_name]
-
-                    agent.context['validators'][attestation.agent_name] += base_reward * (1 / delay)
 
             # Execute the transactions
             agent.reorg(reverted_blocks, added_blocks)
@@ -664,7 +913,7 @@ class BlockchainMaintainer(Role):
         """
 
         for index, tx in enumerate(block.transactions):
-
+                  
             if agent.validate_transaction(tx) is False:
 
                 # An invalid tx was found while executing the block
@@ -678,6 +927,10 @@ class BlockchainMaintainer(Role):
 
             agent.execute_transaction(tx)
             agent.discard_transaction(tx)
+
+            # Process the deposit transactions to update the beacon state
+            if tx.to == "deposit_contract" and agent.context['receipts'][tx.hash].reverted is False:
+                agent.context['beacon_states'][block.hash].add_validator(tx.origin)
 
         if agent.context['state'].get_account(block.creator) is None:
             change = CreateAccount(Account(block.creator, 0))
@@ -750,21 +1003,4 @@ class BlockchainMaintainer(Role):
 
         return True
     
-    @staticmethod
-    @export
-    def compute_base_reward(agent: ExternalAgent, validator: str) -> int:
-        """
-            Compute the base reward for a given validator
-
-            :param validator: the validator to compute the base reward for
-            :type validator: str
-            :returns: the base reward for the given validator at the current epoch
-            :rtype: int
-        """
-        base_reward_factor = agent.context['base_reward_factor']
-        base_reward_per_epoch = agent.context['base_reward_per_epoch']
-        effective_balance = agent.context['validators'][validator]
-        total_effective_balance = agent.context['total_effective_balance'][agent.context['epoch']]
-
-        return int(effective_balance * (base_reward_factor / (base_reward_per_epoch * math.sqrt(total_effective_balance))))
 

@@ -35,12 +35,15 @@ class Blockchain(IBlockchain):
         self.last_justified_block = genesis
         self.last_finalized_block = genesis
 
-    def get_last_finalized_block(self) -> Block:
+    def get_last_finalized_block(self, block: Block = None) -> Block:
         """
             Get the last known finalized block
         """
         last_finalized = None
-        current = self._head
+        current = block
+
+        if current is None:
+            current = self._head
 
         while current is not None:
             if current.finalized:
@@ -51,18 +54,34 @@ class Blockchain(IBlockchain):
 
         return last_finalized
     
+    def get_block_for_slot(self, slot: int, anchor: Block) -> Block:
+        """
+            Get the block for a given slot that is an ancestor of the given anchor
+        """
+        blocks = self.slots_to_blocks[slot]
+
+        for block in blocks:
+            if self.is_close_parent(anchor, block, abs(block.slot - anchor.slot)):
+                return block
+
+        return None
+
     def get_blocks_for_slot(self, slot: int) -> list[Block]:
         """
             Get the list of blocks for a given slot
         """
         return self.slots_to_blocks[slot]
     
-    def get_last_justified_block(self) -> Block:
+    def get_last_justified_block(self, block: Block = None) -> Block:
         """
             Get the last known justified block
         """
         last_justified = None
-        current = self._head
+        current = block
+
+        if current is None:
+            current = self._head
+
         i = 0
 
         while current is not None:
@@ -99,7 +118,9 @@ class Blockchain(IBlockchain):
         """
         current = block
 
-        if current is not None and current.justified is False:
+        assert current is not None
+
+        if current.justified is False and current.slot > self.last_justified_block.slot:
             self.last_justified_block = current
 
         # Justify the block and all its ancestors
@@ -115,14 +136,24 @@ class Blockchain(IBlockchain):
         """
         current = block
 
-        if current is not None and current.finalized is False:
+        assert current is not None
+
+        if current.finalized is True:
+            return
+
+        assert current.slot > self.last_finalized_block.slot
+
+        if current.finalized is False and current.slot > self.last_finalized_block.slot:
             self.last_finalized_block = current
 
         # Finalize the block and all its ancestors
         while current is not None and current.finalized is False:
             current.justified = True
             current.finalized = True
+            #print("Finalizing : " + str(current.slot) + " - " + str(current.hash))
             current = self._blocks[current.parent_hash]
+
+        #print(block.finalized)
 
     def contains_attestation(self, attestation: Attestation) -> bool:
         """ Check if the blockchain contains the given attestation
@@ -187,7 +218,7 @@ class Blockchain(IBlockchain):
 
             childrens = self._children[current.hash]
 
-            # No children, we are done
+            # No children, we are done on this branch
             if len(childrens) == 0:
                 break
 
@@ -195,9 +226,6 @@ class Blockchain(IBlockchain):
             if len(childrens) == 1:
                 current = childrens[0]
                 continue
-
-            children_weights = [weights[child.hash] for child in childrens]
-            #max_weight = max(children_weights)
 
             sorted_children = sorted(childrens, key=lambda child: (weights[child.hash], child.hash), reverse=True)
             current = sorted_children[0]
@@ -293,25 +321,30 @@ class Blockchain(IBlockchain):
 
         return False
 
-    def get_checkpoint_from_epoch(self, epoch: int) -> Block:
+    def get_checkpoint_from_epoch(self, epoch: int, anchor: Block = None) -> Block:
         """
             Get the checkpoint for a given epoch according to the local chain
         """
 
         if epoch == 0:
             return self.genesis
+
+        current = anchor
+
+        if current is None:
+            current = self._head
         
         slot = epoch * 32
 
         while True:
             slot_blocks = self.slots_to_blocks[slot]
 
-            # We may have multiple blocks for the same slot : we return the one on the main chain
+            # We may have multiple blocks for the same slot : we return the one extending the anchor
             for block in slot_blocks:
-                if self.is_block_on_main_chain(block):
+                if self.is_close_parent(current, block, abs(block.slot - current.slot)):
                     return block
-                
-            # We did not find any block for this slot on the main chain, we try the previous slot
+
+            # We did not find any block for this slot, we try the previous slot
             slot -= 1
     
     def add_block_strict(self, block: Block) -> bool:
@@ -362,6 +395,8 @@ class Blockchain(IBlockchain):
             :returns: wether the Block was added to the chain or not
             :rtype: bool
         """
+
+        assert block.parent_hash in self._blocks
 
         # Block is already known : exit early
         if block.hash in self._blocks:

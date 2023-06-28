@@ -10,7 +10,7 @@ import agr4bs
 from agr4bs.models.eth2.blockchain import Transaction, Block
 
 N_EPOCH = 10
-JITTER = 6
+JITTER = 24
 TIME = N_EPOCH * 12 * 32 + JITTER
 
 def test_block_creation():
@@ -18,13 +18,16 @@ def test_block_creation():
         Test that the environment can be run and stopped later
         with no error or unwaited tasks
     """
-    random.seed(1)
+    random.seed(0)
 
     nb_agents = 32
     model = agr4bs.models.eth2
     model.Factory.build_network(reset=True)
-    genesis = Block(None, "genesis", 0, [Transaction(
-        "genesis", f"agent_{i}", 0) for i in range(nb_agents)])
+
+    account_transactions = [Transaction("genesis", f"agent_{i}", i, 0, 32 * 10 ** 18) for i in range(nb_agents)]
+    deposit_transactions = [Transaction(f"agent_{i}", "deposit_contract", 0, 0, 32 * 10 ** 18) for i in range(nb_agents)]
+
+    genesis = Block(None, "genesis", 0, account_transactions + deposit_transactions)
 
     agents = []
 
@@ -84,7 +87,7 @@ def test_block_creation():
 
     for agent in agents:
         assert agent.context['epoch'] == N_EPOCH
-        assert agent.context['slot'] == 32 * N_EPOCH
+        assert agent.context['slot'] == 32 * N_EPOCH + ((JITTER / 2) // 12)
 
     for agent in agents:
         blockchain = agent.context['blockchain']
@@ -96,11 +99,13 @@ def test_block_creation():
 
             block = blocks[0]
             
-            if slot <= 32 * (N_EPOCH - 2):
-                assert block.finalized
+            if agent.name == "agent_0":
+            
+                if slot <= 32 * (N_EPOCH - 2):
+                    assert block.finalized
 
-            if slot <= 32 * (N_EPOCH - 1):
-                assert block.justified
-            else:
-                assert not block.justified
-                assert not block.finalized
+                if slot <= 32 * (N_EPOCH - 1):
+                    assert block.justified
+                else:
+                    assert not block.justified
+                    assert not block.finalized

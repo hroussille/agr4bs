@@ -3,9 +3,12 @@
     Block file class implementation
 """
 
+import hashlib
+import pickle
 from ....blockchain import IBlockHeader, IBlock
 from .attestation import Attestation
 from .transaction import Transaction
+
 
 class BlockHeader(IBlockHeader):
 
@@ -31,12 +34,12 @@ class Block(IBlock):
 
     def __init__(self, parent_hash: str, creator: str, slot: int, transactions: list[Transaction] = None) -> None:
 
-        super().__init__(parent_hash, creator, transactions)
-
         self._justified = False
         self._finalized = False
         self._slot = slot
         self._attestations = []
+
+        super().__init__(parent_hash, creator, transactions)
 
     @property
     def justified(self) -> bool:
@@ -58,14 +61,14 @@ class Block(IBlock):
             Get the finalized status of the Block
         """
         return self._finalized
-    
+
     @property
     def slot(self) -> int:
         """
             Get the slot of the Block
         """
         return self._slot
-        
+
     @finalized.setter
     def finalized(self, value: bool) -> None:
         """ 
@@ -84,9 +87,27 @@ class Block(IBlock):
         """
             Add an attestation to the Block
         """
-        if attestation not in self._attestations: 
+        if attestation not in self._attestations:
             self._attestations.append(attestation)
             return
 
-        raise ValueError("Dupplicated attestation for agent " + attestation.agent_name)       
+        raise ValueError(
+            "Dupplicated attestation for agent " + attestation.agent_name)
 
+    def compute_hash(self) -> str:
+        """ Computes the hash of the Block
+
+            :returns: The hash of the Block
+            :rtype: str
+        """
+
+        hash_dict = {
+            'number': self._number,
+            'parent_hash': self._parent_hash,
+            'creator': self._creator,
+            'total_fees': self._total_fees,
+            'transactions': list(map(lambda tx: tx.compute_hash(), self._transactions)),
+            'slot': self._slot
+        }
+
+        return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()

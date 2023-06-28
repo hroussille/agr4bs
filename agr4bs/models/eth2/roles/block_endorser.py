@@ -62,6 +62,8 @@ class BlockEndorser(Role):
         """
         agent.context['attestation_done'] = False
 
+        # Schedule the endorsement of the block if the agent is an attester
+        # and no block was received before 1/3 of the slot time has elapsed
         if agent.name in attesters:
             agent.schedule_behavior('endorse_block', datetime.timedelta(seconds=4))
 
@@ -94,12 +96,12 @@ class BlockEndorser(Role):
         # This is the checkpoint that we are attesting to :
         # - source is the last justified checkpoint extending the finalized chain
         # - target is the last non-justified checkpoint extending the source
-
-        #source = blockchain.get_last_justified_block()
-        source = agent.context['blockchain'].last_justified_block
-        target = blockchain.get_checkpoint_from_epoch(agent.context['epoch'])
+        
+        source = agent.context['beacon_states'][root.hash].current_justified_checkpoint()
+        target = blockchain.get_checkpoint_from_epoch(agent.context['epoch'], root)
 
         attestation = Attestation(agent.name, agent.context['epoch'], agent.context['slot'], agent.context['index'], root.hash, source.hash, target.hash)
-        validators = list(agent.context['validators'].keys())
+        validators = agent.context['beacon_states'][root.hash].validators
         
         agent.send_message(DiffuseBlockEndorsement(agent.name, attestation), validators)
+ 

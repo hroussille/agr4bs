@@ -116,7 +116,8 @@ class BlockProposer(Role):
 
         block = agent.create_block(selected_transactions)
 
-        agent.append_block(block)
+        # call receive_block instead of append_block to trigger the beacon chain state update
+        agent.receive_block(block)
         agent.propose_block(block)
 
     @staticmethod
@@ -129,7 +130,6 @@ class BlockProposer(Role):
             :returns: the block with the transactions included in it
             :rtype: Block
         """
-
         head_hash = agent.context['blockchain'].head.hash
         slot = agent.context['slot']
         block = agent.context['factory'].build_block(head_hash, agent.name, slot, transactions)

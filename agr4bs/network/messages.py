@@ -252,9 +252,9 @@ class NextEpoch(Message):
         Message sent to notify an Agent to move on the the next time epoch
     """
 
-    def __init__(self, origin: str, epoch: int, n_attesters: int):
+    def __init__(self, origin: str, epoch: int):
         _event = NEXT_EPOCH
-        super().__init__(origin, _event, epoch, n_attesters)
+        super().__init__(origin, _event, epoch)
 
 
 class CreateBlock(Message):

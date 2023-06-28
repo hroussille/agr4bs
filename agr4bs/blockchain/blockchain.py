@@ -155,6 +155,11 @@ class IBlockchain():
         """
             Find out if a Block is a distant parent of another Block
         """
+
+        # Special case if child == parent
+        if child_block.hash == parent_block.hash:
+            return True
+
         for _ in range(limit):
 
             if child_block.parent_hash == parent_block.hash:

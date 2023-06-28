@@ -61,6 +61,9 @@ class Network():
             self._message_queue.put(message)
 
     def has_message(self):
+        """
+            Check if the network has a message to deliver
+        """
         return not self._message_queue.empty()
 
     def get_next_message(self):

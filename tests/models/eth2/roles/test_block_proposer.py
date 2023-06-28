@@ -94,7 +94,7 @@ def test_block_proposer_transaction_selection():
     """
     genesis = Block(None, "genesis", 0, [
         Transaction("genesis", "agent_0", 0, 0, 100),
-        Transaction("genesis", "agent_1", 0, 0, 100)
+        Transaction("genesis", "agent_1", 1, 0, 100)
     ])
 
     agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.models.eth2.Factory)
@@ -103,6 +103,10 @@ def test_block_proposer_transaction_selection():
     agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
     agent.add_role(agr4bs.models.eth2.roles.BlockProposer())
     agent.process_genesis()
+
+    pending_transactions = agent.get_pending_transactions()
+
+    assert len(pending_transactions) == 0
 
     pending_tx1 = Transaction("agent_0", "agent_2", 0, 0, 10)
     pending_tx2 = Transaction("agent_1", "agent_2", 0, 0, 10)
@@ -113,13 +117,11 @@ def test_block_proposer_transaction_selection():
     agent.receive_transaction(queued_tx)
 
     pending_transactions = agent.get_pending_transactions()
-
     selected_transactions = agent.select_transactions(pending_transactions)
 
     assert len(selected_transactions) == 2
     assert selected_transactions[0] == pending_tx1
     assert selected_transactions[1] == pending_tx2
-
 
 def test_block_proposer_block_creation():
     """
@@ -127,7 +129,7 @@ def test_block_proposer_block_creation():
     """
     genesis = Block(None, "genesis", 0, [
                            Transaction("genesis", "agent_0", 0, 0, 100),
-                           Transaction("genesis", "agent_1", 0, 0, 100)
+                           Transaction("genesis", "agent_1", 1, 0, 100)
                            ])
 
     agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.models.eth2.Factory)
@@ -138,16 +140,13 @@ def test_block_proposer_block_creation():
 
     agent.process_genesis()
 
-    print("processed genesis")
-
     pending_tx1 = Transaction("agent_0", "agent_2", 0, 0, 10)
     pending_tx2 = Transaction("agent_1", "agent_2", 0, 0, 10)
 
     agent.receive_transaction(pending_tx1)
     agent.receive_transaction(pending_tx2)
 
-    print("can create_block")
-
+    agent.next_slot(1, ["agent_0"])
     agent.can_create_block()
 
     head = agent.context['blockchain'].head
@@ -160,8 +159,6 @@ def test_block_proposer_block_creation():
     assert len(head.transactions) == 2
     assert head.transactions[0] == pending_tx1
     assert head.transactions[1] == pending_tx2
-
-    print(agent.context['state'].get_account_balance('agent_2'))
 
     # Check proper state transition according to block content
     assert agent.context['state'].get_account_balance('agent_2') == 20

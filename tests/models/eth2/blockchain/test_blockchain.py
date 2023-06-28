@@ -49,10 +49,10 @@ def test_blockchain_finalize_block():
         Test that blockchain.finalize_block() behaves correctly
     """
     genesis = Block(None, None, 0, [])
-    block1 = Block(genesis.hash, None, 0, [])
-    block2 = Block(block1.hash, None, 0, [])
-    block3 = Block(block2.hash, None, 0, [])
-    block4 = Block(block3.hash, None, 0, [])
+    block1 = Block(genesis.hash, None, 1, [])
+    block2 = Block(block1.hash, None, 2, [])
+    block3 = Block(block2.hash, None, 3, [])
+    block4 = Block(block3.hash, None, 4, [])
 
     blockchain = Blockchain(genesis)
 
@@ -235,8 +235,10 @@ def test_blockchain_get_checkpoint_from_epoch_nominal_case():
         blocks.append(block)
         previous = block
 
+    assert blockchain.head == blocks[-1]
     assert blockchain.get_checkpoint_from_epoch(0) == genesis
     assert blockchain.get_checkpoint_from_epoch(1) == blocks[-1]
+
 
 
 def test_blockchain_get_checkpoint_from_epoch_missing_blocks():
