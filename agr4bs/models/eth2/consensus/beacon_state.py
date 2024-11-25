@@ -36,6 +36,10 @@ class BeaconState (Serializable):
 
         self._current_participations = {}
         self._previous_participations = {}
+
+        self._current_included_attestations = []
+        self._previous_included_attestations = []
+
         self._justification_bits = BitVector(size=JUSTIFICATION_BITS_LENGTH)
 
     @property
@@ -229,6 +233,37 @@ class BeaconState (Serializable):
 
         increments = self._effective_balances[validator] // EFFECTIVE_BALANCE_INCREMENT
         return increments * self.get_base_reward_per_increment()
+    
+    def get_included_attestations(self, epoch: int) -> list['Attestation']:
+        """
+            Returns the list of included attestations in the given epoch
+        """
+        assert epoch in [self.current_epoch(), self.previous_epoch()]
+
+        if epoch == self.current_epoch():
+            return self._current_included_attestations
+        
+        return self._previous_included_attestations
+    
+    def include_attestation(self, attestation: 'Attestation') -> None:
+        """
+            Include the given attestation in the state
+        """
+        assert attestation.epoch in [self.current_epoch(), self.previous_epoch()]
+        assert attestation not in self.get_included_attestations(attestation.epoch)
+
+        if attestation.epoch == self.current_epoch():
+            self._current_included_attestations.append(attestation)
+        
+        else:
+            self._previous_included_attestations.append(attestation)
+
+    def is_attestation_included(self, attestation: 'Attestation') -> bool:
+        """
+            Returns true if the given attestation is included in the state False otherwise
+        """
+        included_attestations = self.get_included_attestations(attestation.epoch)
+        return attestation in included_attestations
 
     def get_participation(self, epoch: int, flag_index: str) -> list[str]:
 
@@ -238,7 +273,7 @@ class BeaconState (Serializable):
 
         assert epoch in [self.current_epoch(), self.previous_epoch()]
 
-        active_validators = self.get_active_validators(epoch)
+        active_validators = self.get_active_validators()
 
         if epoch == self.current_epoch():
             epoch_participation = self._current_participations
@@ -272,7 +307,7 @@ class BeaconState (Serializable):
 
         self.current_epoch_participation[validator] |= flag_index
 
-    def get_active_validators(self, epoch: int) -> list[str]:
+    def get_active_validators(self) -> list[str]:
         """
             Returns the list of active validators in the given epoch
             TODO: implement the validator class to account for activation and exit epochs
@@ -347,6 +382,13 @@ class BeaconState (Serializable):
         """
         self.previous_epoch_participation = self.current_epoch_participation
         self.current_epoch_participation = { validator: 0 for validator in self.validators }
+
+    def process_included_attestations_updates(self) -> None:
+        """
+            Rotate the included attestations
+        """
+        self._previous_included_attestations = self._current_included_attestations
+        self._current_included_attestations = []
 
     def copy(self) -> "BeaconState":
         """

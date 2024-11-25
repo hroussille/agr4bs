@@ -3,6 +3,7 @@
 """
 
 import agr4bs
+import datetime
 from agr4bs.models.eth2.blockchain import Block, Transaction
 
 def test_block_proposer_type():
@@ -138,7 +139,7 @@ def test_block_proposer_block_creation():
     agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
     agent.add_role(agr4bs.models.eth2.roles.BlockProposer())
 
-    agent.process_genesis()
+    agent.init(datetime.datetime.now())
 
     pending_tx1 = Transaction("agent_0", "agent_2", 0, 0, 10)
     pending_tx2 = Transaction("agent_1", "agent_2", 0, 0, 10)

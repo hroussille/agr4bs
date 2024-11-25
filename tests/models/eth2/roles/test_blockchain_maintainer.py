@@ -3,6 +3,7 @@
 """
 
 import agr4bs
+import datetime
 
 from agr4bs.models.eth2.blockchain import Block, Transaction
 
@@ -229,3 +230,102 @@ def test_blockchain_maintainer_replace_transaction():
 
     assert agent.receive_transaction(replacement_tx)
     assert agent.context['tx_pool']['agent_0'][0] == replacement_tx
+
+def test_new_head_no_attestations():
+    """
+        Test that blockchain.process_block_votes() behaves correctly
+        when no block votes are received
+    """
+
+    account_transactions = [Transaction("genesis", f"agent_{0}", 0, 0, 32 * 10 ** 18)]
+    deposit_transactions = [Transaction(f"agent_{0}", "deposit_contract", 0, 0, 32 * 10 ** 18)]
+
+    genesis = Block(None, "genesis", 0, account_transactions + deposit_transactions)
+
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.models.eth2.Factory)
+
+    agent.add_role(agr4bs.roles.StaticPeer())
+    agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
+
+    agent.init(datetime.datetime.now())
+
+    block = Block(genesis.hash, "agent_0", 1, [])
+    agent.receive_block(block)
+
+    assert agent.get_head() == block.hash
+
+def test_malicious_fork_with_malicious_attestations():
+    account_transactions = [Transaction("genesis", f"agent_{0}", 0, 0, 32 * 10 ** 18)]
+    deposit_transactions = [Transaction(f"agent_{0}", "deposit_contract", 0, 0, 32 * 10 ** 18)]
+
+    genesis = Block(None, "genesis", 0, account_transactions + deposit_transactions)
+
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.models.eth2.Factory)
+
+    agent.add_role(agr4bs.roles.StaticPeer())
+    agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
+
+    date = datetime.datetime.utcfromtimestamp(0)
+    agent.init(date)
+    agent.next_epoch(0)
+    agent.next_slot(1, ["agent_0"])
+
+    source = genesis.hash
+    target = genesis.hash
+
+    block = Block(genesis.hash, "agent_0", 1, [])
+    fork = Block(genesis.hash, "agent_1", 2, [])
+
+    agent.receive_block(block)
+
+    # Head should be updated to the new block
+    assert agent.get_head() == block.hash
+
+    # Make the block not timely
+    agent.date = date + datetime.timedelta(seconds=16)
+    agent.next_slot(2, ["agent_0"])
+
+    agent.receive_block(fork)
+
+    # Head should not be updated to the fork block yet
+    assert agent.get_head() == block.hash
+
+    attestation = agr4bs.models.eth2.blockchain.Attestation("agent_0", 0, 0, 0, fork.hash, source, target)
+    agent.receive_attestation(attestation)
+
+    # Using the attestation, the head should be updated to the fork block
+    assert agent.get_head() == fork.hash
+
+def test_malicious_fork_with_skip_attestation():
+    account_transactions = [Transaction("genesis", f"agent_{0}", 0, 0, 32 * 10 ** 18)]
+    deposit_transactions = [Transaction(f"agent_{0}", "deposit_contract", 0, 0, 32 * 10 ** 18)]
+
+    genesis = Block(None, "genesis", 0, account_transactions + deposit_transactions)
+
+    agent = agr4bs.ExternalAgent("agent_0", genesis, agr4bs.models.eth2.Factory)
+
+    agent.add_role(agr4bs.roles.StaticPeer())
+    agent.add_role(agr4bs.models.eth2.roles.BlockchainMaintainer())
+
+    # Start date at 0 to avoid issues with the default start
+    date = datetime.datetime.utcfromtimestamp(0)
+    agent.init(date)
+    agent.next_epoch(0)
+    agent.next_slot(1, ["agent_0"])
+
+    block = Block(genesis.hash, "agent_0", 1, [])
+    fork = Block(genesis.hash, "agent_1", 2, [])
+
+    agent.receive_block(block)
+
+    # Head should be updated to the new block
+    assert agent.get_head() == block.hash
+
+    # Make the block timely
+    agent.date = date + datetime.timedelta(seconds=12)
+    agent.next_slot(2, ["agent_0"])
+
+    agent.receive_block(fork)
+
+    # Using the attestation, the head should be updated to the fork block
+    assert agent.get_head() == fork.hash

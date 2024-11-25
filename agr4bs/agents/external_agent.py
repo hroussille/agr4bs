@@ -33,7 +33,7 @@ class ExternalAgent(Agent):
         self.safe_inject('factory', factory)
 
         self.drop_time = 2
-        self.max_inbound_peers = 15
+        self.max_inbound_peers = 20
         self.max_outbound_peers = 5
 
         self._network = factory.build_network()
@@ -41,6 +41,7 @@ class ExternalAgent(Agent):
         self._schedulables = {}
         self._exit = False
         self._date = None
+        self._initial_date = None
 
         self._add_event_handler(STOP_SIMULATION, self.stop_simulation_handler)
         self._add_event_handler(RUN_SCHEDULABLE, self.run_schedulable_handler)
@@ -176,6 +177,7 @@ class ExternalAgent(Agent):
             Initializes the agent
         """
         self._date = date
+        self._initial_date = date
         self._init_schedulables()
         self.fire_event(INIT)
 

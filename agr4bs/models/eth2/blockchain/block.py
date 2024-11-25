@@ -8,6 +8,7 @@ import pickle
 from ....blockchain import IBlockHeader, IBlock
 from .attestation import Attestation
 from .transaction import Transaction
+from ..constants import SLOTS_PER_EPOCH
 
 
 class BlockHeader(IBlockHeader):
@@ -38,6 +39,7 @@ class Block(IBlock):
         self._finalized = False
         self._slot = slot
         self._attestations = []
+        self._seed = 0
 
         super().__init__(parent_hash, creator, transactions)
 
@@ -68,6 +70,27 @@ class Block(IBlock):
             Get the slot of the Block
         """
         return self._slot
+    
+    @property
+    def epoch(self) -> int:
+        """
+            Get the epoch of the Block
+        """
+        return self._slot // SLOTS_PER_EPOCH
+    
+    @property
+    def seed(self) -> int:
+        """
+            Get the seed of the Block
+        """
+        return self._seed
+    
+    @seed.setter
+    def seed(self, value: int) -> None:
+        """
+            Set the seed of the Block
+        """
+        self._seed = value
 
     @finalized.setter
     def finalized(self, value: bool) -> None:
@@ -107,7 +130,8 @@ class Block(IBlock):
             'creator': self._creator,
             'total_fees': self._total_fees,
             'transactions': list(map(lambda tx: tx.compute_hash(), self._transactions)),
-            'slot': self._slot
+            'slot': self._slot,
+            'seed': self._seed
         }
 
         return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()

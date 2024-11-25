@@ -85,11 +85,15 @@ class BlockEndorser(Role):
         blockchain = agent.context['blockchain']
 
         # Process the block votes that we received in slot n - 1
-        # This will (hopefully) consensually update the blockchain head
-        # A reorg may be triggered if the local view of the blockchain is not the same as the network's
-        reverted_blocks, appended_blocks = blockchain.process_block_votes(agent.context['attestations'])
-        agent.reorg(reverted_blocks, appended_blocks)
+        # This will consensually update the blockchain head
+        honest_head = blockchain.get_block(agent.get_head())
 
+        if honest_head.hash != blockchain.head.hash:
+            reverted_blocks, added_blocks = blockchain.find_path(blockchain.head, honest_head)
+            agent.reorg(reverted_blocks, added_blocks)
+
+        assert honest_head.hash == blockchain.head.hash
+        
         # This is the block that we are endorsing as the head of the chain
         root = blockchain.head
 
@@ -103,5 +107,5 @@ class BlockEndorser(Role):
         attestation = Attestation(agent.name, agent.context['epoch'], agent.context['slot'], agent.context['index'], root.hash, source.hash, target.hash)
         validators = agent.context['beacon_states'][root.hash].validators
         
-        agent.send_message(DiffuseBlockEndorsement(agent.name, attestation), validators)
+        agent.send_system_message(DiffuseBlockEndorsement(agent.name, attestation), validators)
  

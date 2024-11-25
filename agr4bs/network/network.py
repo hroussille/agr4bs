@@ -52,7 +52,9 @@ class Network():
         """
             Send a message to the network.
         """
-        if random.random() > self.drop_rate or no_drop is True:
+        drop_probability = random.random()
+
+        if drop_probability > self.drop_rate or no_drop is True:
             delta = datetime.timedelta(
                 milliseconds=int(random.random() * self.delay))
             message.date = message.date + delta

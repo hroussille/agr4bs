@@ -9,7 +9,7 @@ import agr4bs
 
 from agr4bs.models.eth2.blockchain import Transaction, Block
 
-N_EPOCH = 10
+N_EPOCH = 1
 JITTER = 24
 TIME = N_EPOCH * 12 * 32 + JITTER
 
@@ -76,6 +76,10 @@ def test_block_creation():
 
     # Ensure that one head is shared by all agents
     # i.e., state is consensual
+
+    for ref in agents:
+        print("Head for agent " + ref.name + " : " + ref.context['blockchain'].head.hash)
+
     for head_hash, head_count in heads_counts.items():
         shared_percentage = 100 * head_count / len(agents)
         print("Head : " + head_hash + " shared by " + str(shared_percentage) +

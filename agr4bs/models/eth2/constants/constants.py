@@ -4,9 +4,13 @@ Constants for the Eth2 specification.
 
 # Number of seconds in a slot
 SLOT_TIME = 12
+INTERVAL_PER_SLOT = 3
 
 # Number of slots in an epoch
 SLOTS_PER_EPOCH = 32
+
+# Initial Epoch
+GENESIS_EPOCH = 0
 
 # Default balance (in wei) for new validators
 NEW_VALIDATOR_BALANCE = 32 * 10 ** 9  # Gwei
@@ -30,6 +34,9 @@ TIMELY_HEAD_WEIGHT = 14
 SYNC_REWARD_WEIGHT = 2
 PROPOSER_WEIGHT = 8
 WEIGHT_DENOMINATOR = 64
+
+# Proposer boost
+PROPOSER_SCORE_BOOST = 40
 
 # Bouncing attacks constants
 SAFE_SLOTS_TO_UPDATE_JUSTIFIED = 8

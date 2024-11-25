@@ -20,6 +20,8 @@ from ....roles import Role, RoleType
 from ..blockchain import Block, Transaction
 from ....common import on, export
 
+import time
+
 
 class BlockProposerContextChange(ContextChange):
     """
@@ -88,8 +90,11 @@ class BlockProposer(Role):
         """
 
         blockchain = agent.context['blockchain']
-        reverted_blocks, appended_blocks = blockchain.process_block_votes(agent.context['attestations'])
-        agent.reorg(reverted_blocks, appended_blocks)
+        new_head = blockchain.get_block(agent.get_head())
+
+        if (new_head.hash != blockchain.head.hash):
+            reverted_blocks, added_blocks = agent.context['blockchain'].find_path(agent.context['blockchain'].head, new_head)
+            agent.reorg(reverted_blocks, added_blocks)
 
         state_copy = agent.context['state'].copy()
         pending_transactions = agent.get_pending_transactions()
@@ -130,13 +135,23 @@ class BlockProposer(Role):
             :returns: the block with the transactions included in it
             :rtype: Block
         """
-        head_hash = agent.context['blockchain'].head.hash
+
+        # Deviate from the nominal behavior by attaching the block to the parent of the head
+
+        head = agent.context['blockchain'].head
+        state = agent.context['beacon_states'][head.hash]
         slot = agent.context['slot']
-        block = agent.context['factory'].build_block(head_hash, agent.name, slot, transactions)
+        block = agent.context['factory'].build_block(head.hash, agent.name, slot, transactions)
 
         # Greedy attestation inclusion
-        for attestation in agent.context['attestations']:
-            block.add_attestation(attestation)
+        # for attestation in agent.context['attestations']:
+            
+        #     block.add_attestation(attestation)
+        #     agent.context['attestations'].remove(attestation)
+
+        for attestation in agent.context["latest_messages"].values():
+            if state.is_attestation_included(attestation) is False:
+                block.add_attestation(attestation)
         
         return block
 

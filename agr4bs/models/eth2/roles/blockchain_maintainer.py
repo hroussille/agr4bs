@@ -10,6 +10,7 @@ ExternalAgent context when the Role is mounted and unmounted.
 
 from collections import defaultdict
 import math
+import time
 
 from ....events.events import INIT
 from ....state.account import Account
@@ -23,8 +24,7 @@ from ....common import on, export
 from ..blockchain import Block, Transaction, Attestation, Blockchain
 from ..factory import Factory
 from ..consensus import BeaconState
-from ..constants import SLOTS_PER_EPOCH, INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE, INACTIVITY_PENALTY_QUOTIENT_BELLATRIX, EFFECTIVE_BALANCE_INCREMENT, PARTICIPATION_FLAG_WEIGHTS, WEIGHT_DENOMINATOR, PROPOSER_WEIGHT, TIMELY_TARGET_FLAG_INDEX, TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, JUSTIFICATION_BITS_LENGTH, MIN_ATTESTATION_INCLUSION_DELAY
-
+from ..constants import PROPOSER_SCORE_BOOST, INTERVAL_PER_SLOT, SLOT_TIME, GENESIS_EPOCH, SLOTS_PER_EPOCH, INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE, INACTIVITY_PENALTY_QUOTIENT_BELLATRIX, EFFECTIVE_BALANCE_INCREMENT, PARTICIPATION_FLAG_WEIGHTS, WEIGHT_DENOMINATOR, PROPOSER_WEIGHT, TIMELY_TARGET_FLAG_INDEX, TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, JUSTIFICATION_BITS_LENGTH, MIN_ATTESTATION_INCLUSION_DELAY
 
 class BlockchainMaintainerContextChange(ContextChange):
 
@@ -63,8 +63,16 @@ class BlockchainMaintainerContextChange(ContextChange):
         # Those will be unlocked at the next slot
         self.pending_attestations = []
 
+        self.unrealized_justifications = {}
+        self.unrealized_justified_checkpoint = None
+        self.unrealized_finalized_checkpoint = None
+        self.justified_checkpoint = None
+        self.finalized_checkpoint = None
+
         # The attestations that are included in the chain (main chain or fork)
-        self.included_attestations_per_epoch = defaultdict(lambda: [])
+        # self.included_attestations_per_epoch = defaultdict(lambda: [])
+
+        self.genesis_time = None
 
 
     @staticmethod
@@ -155,6 +163,9 @@ class BlockchainMaintainer(Role):
 
         genesis = agent.context['blockchain'].genesis
         agent.context['beacon_states'][genesis.hash] = BeaconState(genesis)
+        agent.context["justified_checkpoint"] = genesis
+        agent.context["finalized_checkpoint"] = genesis
+        agent.context["genesis_time"] = agent.date
         agent.execute_block(genesis)
 
     @staticmethod
@@ -201,19 +212,18 @@ class BlockchainMaintainer(Role):
 
         # Block is already known￼
         if agent.context['blockchain'].get_block(block_hash) is not None:
+            #print("Agent ", agent.name, "received a known block : ", block_hash)
             return
 
         # Block is invalid
         if agent.validate_block(block) is False:
+            print("Agent ", agent.name, "received an invalid block : ", block_hash)
             return
 
         # Create a new beacon state from the parent state
         state: BeaconState = agent.context['beacon_states'][block.parent_hash].copy()
         state.update_latest_block(block)
         state = agent.process_slots(state, block.slot)
-        
-        # Append the block to the blockchain
-        agent.append_block(block)
 
         # Process the block attestations
         agent.process_attestations(block, state)
@@ -225,11 +235,226 @@ class BlockchainMaintainer(Role):
         # Store the new beacon state
         agent.context['beacon_states'][block_hash] = state
 
+        # Add proposer score boost if the block is timely
+        time_into_slot = (agent.date - agent.context["genesis_time"]).seconds % SLOT_TIME
+        is_before_attesting_interval = time_into_slot < SLOT_TIME // INTERVAL_PER_SLOT
+        
+        if agent.context["slot"] == block.slot and is_before_attesting_interval:
+            agent.context["proposer_boost"] = block.hash
+     
+        agent.update_checkpoints(state.current_justified_checkpoint(), state.finalized_checkpoint())
+        agent.compute_pulled_up_tips(block)
+
+        # Append the block to the blockchain
+        agent.append_block(block)
+
         # Trigger the endorsement policy if required
         if agent.context['attester']:
-            ##print("Triggering endorsement policy for", agent.name, "on block", block_hash, "slot", block.slot)
             agent.send_system_message(RequestBlockEndorsement(agent.name), agent.name)
 
+
+    @staticmethod
+    @export
+    def update_unrealized_checkpoints(agent: ExternalAgent, unrealized_justified_checkpoint: Block,
+                                  unrealized_finalized_checkpoint: Block) -> None:
+        """
+        Update unrealized checkpoints in store if necessary
+        """
+
+        # Update unrealized justifsied checkpoint
+
+        ctx_unrealized_justified_checkpoint = agent.context["unrealized_justified_checkpoint"]
+        if ctx_unrealized_justified_checkpoint is None or unrealized_justified_checkpoint.epoch > agent.context["unrealized_justified_checkpoint"].epoch:
+            agent.context["unrealized_justified_checkpoint"] = unrealized_justified_checkpoint
+
+        # Update unrealized finalized checkpoint
+        ctx_unrealized_finalized_checkpoint = agent.context["unrealized_finalized_checkpoint"]
+        if ctx_unrealized_finalized_checkpoint is None or unrealized_finalized_checkpoint.epoch > agent.context["unrealized_finalized_checkpoint"].epoch:
+            agent.context["unrealized_finalized_checkpoint"] = unrealized_finalized_checkpoint
+
+
+    @staticmethod
+    @export
+    def update_checkpoints(agent: ExternalAgent, justified_checkpoint: Block, finalized_checkpoint: Block) -> None:
+        """
+        Update checkpoints in store if necessary
+        """
+
+        # Update justified checkpoint
+        if justified_checkpoint and justified_checkpoint.epoch > agent.context["justified_checkpoint"].epoch:
+            agent.context["justified_checkpoint"] = justified_checkpoint
+
+        # Update finalized checkpoint
+        if finalized_checkpoint and finalized_checkpoint.epoch > agent.context["finalized_checkpoint"].epoch:
+            agent.context["finalized_checkpoint"] = finalized_checkpoint
+
+    @staticmethod
+    @export
+    def compute_pulled_up_tips(agent: ExternalAgent, block: Block):
+        """
+            Compute the tips that are pulled up by the given block
+        """
+        state = agent.context['beacon_states'][block.hash].copy()
+
+        agent.process_justification_and_finalization(state)
+        agent.context['unrealized_justifications'][block.hash] = state.current_justified_checkpoint()
+        agent.update_unrealized_checkpoints(state.current_justified_checkpoint(), state.finalized_checkpoint())
+
+        # If the block is from a prior epoch, apply the realized values
+        block_epoch = block.slot // SLOTS_PER_EPOCH
+        current_epoch = state.current_epoch()
+        
+        if block_epoch < current_epoch:
+            agent.update_checkpoints(state.current_justified_checkpoint(), state.finalized_checkpoint())
+
+
+    @staticmethod
+    @export
+    def is_previous_epoch_justified(agent: ExternalAgent) -> bool:
+        current_epoch = agent.context['epoch']
+        return agent.context["justified_checkpoint"].epoch + 1 == current_epoch
+
+    @staticmethod
+    @export
+    def compute_start_slot_at_epoch(agent: ExternalAgent, epoch: int) -> int:
+        """
+        Return the start slot of ``epoch``.
+        """
+        return epoch * SLOTS_PER_EPOCH
+
+    @staticmethod
+    @export
+    def get_ancestor(agent: ExternalAgent, block_hash: str, slot: int) -> str:
+        block: Block = agent.context['blockchain'].get_block(block_hash)
+        if block.slot > slot:
+            return agent.get_ancestor(block.parent_hash, slot)
+        return block_hash
+
+    @staticmethod
+    @export
+    def filter_block_tree(agent: ExternalAgent, block_root: str, blocks: dict[str, Block]) -> bool:
+        block = agent.context['blockchain'].get_block(block_root)
+        children = agent.context['blockchain'].get_direct_children(block)
+
+        # If any children branches contain expected finalized/justified checkpoints,
+        # add to filtered block-tree and signal viability to parent.
+        if any(children):
+            filter_block_tree_result = [agent.filter_block_tree(child.hash, blocks) for child in children]
+            if any(filter_block_tree_result):
+                blocks[block_root] = block
+                return True
+            return False
+
+        current_epoch = agent.context['epoch']
+        voting_source = agent.get_voting_source(block_root)
+
+        # The voting source should be at the same height as the store's justified checkpoint
+        correct_justified = (
+            agent.context["justified_checkpoint"].epoch == GENESIS_EPOCH
+            or voting_source.epoch == agent.context["justified_checkpoint"].epoch
+        )
+
+        # If the previous epoch is justified, the block should be pulled-up. In this case, check that unrealized
+        # justification is higher than the store and that the voting source is not more than two epochs ago
+        if not correct_justified and agent.is_previous_epoch_justified():
+            correct_justified = (
+                agent.context["unrealized_justifications"][block_root].epoch >= agent.context["justified_checkpoint"].epoch and
+                voting_source.epoch + 2 >= current_epoch
+            )
+
+        finalized_slot = agent.compute_start_slot_at_epoch(agent.context["finalized_checkpoint"].epoch)
+        correct_finalized = (
+            agent.context["finalized_checkpoint"].epoch == GENESIS_EPOCH
+            or agent.context["finalized_checkpoint"].hash == agent.get_ancestor(block_root, finalized_slot)
+        )
+        # If expected finalized/justified, add to viable block-tree and signal viability to parent.
+        if correct_justified and correct_finalized:
+            blocks[block_root] = block
+            return True
+
+        # Otherwise, branch not viable
+        return False
+
+
+    @staticmethod
+    @export
+    def get_filtered_block_tree(agent: ExternalAgent) -> dict:
+        """
+        Retrieve a filtered block tree from ``store``, only returning branches
+        whose leaf state's justified/finalized info agrees with that in ``store``.
+        """
+        base = agent.context["justified_checkpoint"]
+        blocks = {}
+        agent.filter_block_tree(base.hash, blocks)
+        return blocks
+
+    @staticmethod
+    @export
+    def get_head(agent: ExternalAgent) -> Block:
+        """
+            Get the head block of the blockchain
+        """
+        # Get filtered block tree that only includes viable branches
+        blocks = agent.get_filtered_block_tree()
+
+        # Execute the LMD-GHOST fork choice
+        head = agent.context["justified_checkpoint"].hash
+        while True:
+            children = [
+                root for root in blocks.keys()
+                if blocks[root].parent_hash == head
+            ]
+            if len(children) == 0:
+                return head
+
+            # Sort by latest attesting balance with ties broken lexicographically
+            # Ties broken by favoring block with lexicographically higher root
+            head = max(children, key=lambda root: (agent.get_weight(root), root))
+
+    @staticmethod
+    @export
+    def get_weight(agent: ExternalAgent, block_hash: str):
+        state: BeaconState = agent.context['beacon_states'][block_hash]
+        unslashed_and_active_validators = state.get_active_validators()
+
+        attestation_score = sum(
+            state.effective_balances[i] for i in unslashed_and_active_validators
+            if (i in agent.context["latest_messages"].keys()
+                and agent.get_ancestor(agent.context["latest_messages"][i].root, agent.context["blockchain"].get_block(block_hash).slot) == block_hash)
+        )
+
+        if agent.context["proposer_boost"] is None:
+            # Return only attestation score if ``proposer_boost_root`` is not set
+            return attestation_score
+
+        # Calculate proposer score if ``proposer_boost_root`` is set
+        proposer_score = 0
+
+        # Boost is applied if ``root`` is an ancestor of ``proposer_boost_root``
+        if agent.get_ancestor(agent.context["proposer_boost"], agent.context["blockchain"].get_block(block_hash).slot) == block_hash:
+            committee_weight = state.get_total_effective_balance() // SLOTS_PER_EPOCH
+            proposer_score = (committee_weight * PROPOSER_SCORE_BOOST) // 100
+
+        return attestation_score + proposer_score
+
+    @staticmethod
+    @export
+    def get_voting_source(agent: ExternalAgent, block_hash: str) -> Block:
+        """
+            Get the source block for the given block
+        """
+        block = agent.context['blockchain'].get_block(block_hash)
+        current_epoch = agent.context['epoch']
+        block_epoch = block.epoch
+
+        if current_epoch > block_epoch:
+            # The block is from a prior epoch, the voting source will be pulled-up
+            return agent.context["unrealized_justifications"][block_hash]
+        else:
+            # The block is not from a prior epoch, therefore the voting source is not pulled up
+            head_state = agent.context['beacon_states'][block_hash]
+            return head_state.current_justified_checkpoint()
+        
     @staticmethod
     @export
     def process_attestations(agent: ExternalAgent, block: Block, state: BeaconState):
@@ -238,9 +463,13 @@ class BlockchainMaintainer(Role):
         """           
         for attestation in block.attestations:
             agent.process_attestation(attestation, state)
+            state.include_attestation(attestation)
 
             if attestation in agent.context['attestations']:
                 agent.context['attestations'].remove(attestation)
+
+            if attestation in agent.context['pending_attestations']:
+                agent.context['pending_attestations'].remove(attestation)
 
     @staticmethod
     @export
@@ -291,6 +520,7 @@ class BlockchainMaintainer(Role):
         proposer_reward = proposer_reward_numerator // proposer_reward_denominator
 
         state.reward_validator(state.latest_block().creator, proposer_reward)
+        # agent.context['included_attestations_per_epoch'][target_epoch].append(attestation)
 
     @staticmethod
     @export
@@ -306,7 +536,6 @@ class BlockchainMaintainer(Role):
             justified_checkpoint = state.current_justified_checkpoint()
         else:
             justified_checkpoint = state.previous_justified_checkpoint()
-
 
         expected_target = agent.context['blockchain'].get_checkpoint_from_epoch(target_epoch, state.latest_block())
         expected_head = agent.context['blockchain'].get_block_for_slot(attestation.slot, state.latest_block())
@@ -358,7 +587,6 @@ class BlockchainMaintainer(Role):
             return
 
         flag_deltas = [agent.get_flag_index_deltas(state, flag_index) for flag_index in range(len(PARTICIPATION_FLAG_WEIGHTS))]
-
         deltas = flag_deltas + [agent.get_inactivity_penalty_deltas(state)]
 
         for (rewards, penalties) in deltas:
@@ -422,10 +650,12 @@ class BlockchainMaintainer(Role):
         agent.process_justification_and_finalization(state)
         agent.process_inactivity_updates(state)  # [New in Altair]
         agent.process_rewards_and_penalties(state)
+
         # agent.process_registry_updates(state)
         # agent.process_slashings(state)  # [Modified in Altair]
         state.process_effective_balance_updates()
         state.process_participation_flag_updates()
+        state.process_included_attestations_updates()
 
     @staticmethod
     @export
@@ -502,7 +732,7 @@ class BlockchainMaintainer(Role):
 
                 current_state = agent.context['beacon_states'][parent_block.hash]
 
-                del agent.context['beacon_states'][parent_block.hash]
+                # del agent.context['beacon_states'][parent_block.hash]
         
         # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
         if all(bits[1:4]) and old_previous_justified_checkpoint_epoch + 3 == current_epoch:
@@ -563,12 +793,12 @@ class BlockchainMaintainer(Role):
         # by another agent (i.e. we receive the block before the attestation)
         # In this case we should validate if the attestation is known or not
         if attestation in agent.context['attestations'] or attestation in agent.context['pending_attestations']:
-            #print("Attestation is already known")
+            #print("Agent ", agent.name, "received a known attestation")
             return
         
         # Use the gossip validation rules
         if not agent.validate_attestation(attestation, gossip=True):
-            #print("Attestation is not valid")
+            #print("Agent ", agent.name, "received an invalid attestation")
             return
     
         # Overwrite the latest attestation from the same agent
@@ -581,11 +811,13 @@ class BlockchainMaintainer(Role):
                     del agent.context['latest_messages'][key]
         
         # The attestation is not pending, it is already included in the local chain
-        if attestation in agent.context['included_attestations_per_epoch'][attestation.epoch]:
-            #print("Attestation is already included in the local chain")
-            return
+        # if attestation in agent.context['included_attestations_per_epoch'][attestation.epoch]:
+            #print("Agent ", agent.name, "received an attestation that is already included in the chain")
+        #    return
 
         agent.context['pending_attestations'].append(attestation)
+
+        
 
     @staticmethod
     @export
@@ -675,6 +907,9 @@ class BlockchainMaintainer(Role):
         # Merge the pending attestations
         agent.context['attestations'] += agent.context['pending_attestations']
         agent.context['pending_attestations'] = []
+        
+        # Reset the proposer boost
+        agent.context['proposer_boost'] = None
 
         # Update the slot
         agent.context['slot'] = slot
@@ -688,6 +923,8 @@ class BlockchainMaintainer(Role):
         """
         assert epoch == agent.context['epoch'] + 1
         agent.context['epoch'] = epoch
+
+        agent.update_checkpoints(agent.context["unrealized_justified_checkpoint"], agent.context["unrealized_finalized_checkpoint"])
         
     @staticmethod
     @export
@@ -848,20 +1085,15 @@ class BlockchainMaintainer(Role):
             :rtype: bool
         """
         if agent.validate_block(block):
+
             head_changed, reverted_blocks, added_blocks = agent.context['blockchain'].add_block(
                 block)
-
-            # Only reorg if the head did not change :
-            # If the head changed then we added on the main chain
-            # If the head did not change then we added on a side chain that may become the main chain
+            
+            # We added one or several blocks that do not extend what we consider the head, recheck the head
             if head_changed is False:
-
-                latest_messages = list(agent.context['latest_messages'].values())
-
-                # Processing the latest messages up to that point may yield a new head
-                # If this is the case we need to reorg the chain right now
-                reverted_blocks, added_blocks = agent.context['blockchain'].process_block_votes(latest_messages)
-
+                new_head = agent.context["blockchain"].get_block(agent.get_head())
+                reverted_blocks, added_blocks = agent.context['blockchain'].find_path(agent.context['blockchain'].head, new_head)
+           
             # Execute the transactions
             agent.reorg(reverted_blocks, added_blocks)
 
@@ -886,20 +1118,21 @@ class BlockchainMaintainer(Role):
             # - compute new candidate head
             # - reorg to the new head
             if not agent.execute_block(added_block):
-                if agent.context["blockchain"].mark_invalid(added_block):
-                    previous_head = agent.context["blockchain"].get_block(
-                        added_block.parent_hash)
-                    new_head = agent.context["blockchain"].find_new_head()
+                raise ValueError("Invalid block found during reorg")
+                # if agent.context["blockchain"].mark_invalid(added_block):
+                #     previous_head = agent.context["blockchain"].get_block(
+                #         added_block.parent_hash)
+                #     new_head = agent.context["blockchain"].find_new_head()
 
-                    if previous_head.hash != new_head.hash:
-                        to_revert, to_add = agent.context["blockchain"].find_path(
-                            previous_head, new_head)
-                        agent.reorg(to_revert, to_add)
+                #     if previous_head.hash != new_head.hash:
+                #         to_revert, to_add = agent.context["blockchain"].find_path(
+                #             previous_head, new_head)
+                #         agent.reorg(to_revert, to_add)
 
-                    else:
-                        agent.context["blockchain"].head = previous_head
+                #     else:
+                #         agent.context["blockchain"].head = previous_head
 
-                    return
+                #     return
 
     @staticmethod
     @export
@@ -959,7 +1192,8 @@ class BlockchainMaintainer(Role):
             del agent.context['receipts'][tx.hash]
 
         for attestation in block.attestations:
-            agent.context['included_attestations_per_epoch'][attestation.epoch].remove(attestation)
+            # agent.context['included_attestations_per_epoch'][attestation.epoch].remove(attestation)
+            agent.context['pending_attestations'].append(attestation)
 
         new_head = agent.context['blockchain'].get_block(block.parent_hash)
         agent.context["blockchain"].head = new_head

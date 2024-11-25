@@ -63,8 +63,9 @@ class Blockchain(IBlockchain):
         for block in blocks:
             if self.is_close_parent(anchor, block, abs(block.slot - anchor.slot)):
                 return block
-
-        return None
+        
+        # The root wasn't found in the current slot, we try the previous slot
+        return self.get_block_for_slot(slot - 1, anchor)
 
     def get_blocks_for_slot(self, slot: int) -> list[Block]:
         """
@@ -163,6 +164,13 @@ class Blockchain(IBlockchain):
             :returns: True if the attestation is known, False otherwise
             :rtype: bool
         """
+
+        candidates = self.get_blocks_for_slot(attestation.slot + 1)
+
+        for candidate in candidates:
+            if attestation in candidate.attestations:
+                return True
+
         return False
     
     def process_block_votes(self, attestations: list[Attestation]) -> tuple[list[Block], list[Block]]:
@@ -287,6 +295,7 @@ class Blockchain(IBlockchain):
             Find the new head in the blockchain
         """
 
+        
         sorted_blocks = [block for block in sorted(
             self._blocks.values(), key=lambda _block: _block.height, reverse=True)]
         candidate = next(block for block in sorted_blocks if not block.invalid)
@@ -420,13 +429,12 @@ class Blockchain(IBlockchain):
                     raise ValueError("Chain is corrupted.")
 
         if self._head == previous_head:
-            return (True, [], [])
+            return (False, [], [])
 
-        reverted_blocks = []
         appended_blocks = []
 
         # If we extend the main chain : update the head
         if self.is_close_parent(self._head, previous_head, len(added_blocks)):
             appended_blocks = self.get_subchain(self._head, previous_head)
 
-        return True, reverted_blocks, appended_blocks
+        return True, [], appended_blocks

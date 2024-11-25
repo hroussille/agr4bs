@@ -27,6 +27,7 @@ class State:
     """
 
     def __init__(self) -> None:
+        self._receipts: dict(Receipt) = {}
         self._accounts: dict(Account) = {}
         self._create_account(CreateAccount(Account('genesis', inf)))
 

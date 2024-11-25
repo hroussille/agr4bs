@@ -36,7 +36,7 @@ class StateChange():
         Blockchain is updated.
     """
 
-    def __init__(self, _type: StateChangeType, account_name: str) -> None:
+    def __init__(self, _type: 'StateChangeType', account_name: str) -> None:
         self._type = _type
         self._account_name = account_name
 
@@ -74,7 +74,7 @@ class AddBalance(StateChange):
         super().__init__(StateChangeType.ADD_BALANCE, account_name)
         self._value = value
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'RemoveBalance':
         return RemoveBalance(self._account_name, self._value)
 
     @property
@@ -97,7 +97,7 @@ class RemoveBalance(StateChange):
         super().__init__(StateChangeType.REMOVE_BALANCE, account_name)
         self._value = value
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'AddBalance':
         return AddBalance(self._account_name, self._value)
 
     @property
@@ -122,7 +122,7 @@ class CreateAccount(StateChange):
         super().__init__(StateChangeType.CREATE_ACCOUNT, account.name)
         self._account = account.copy()
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'DeleteAccount':
         return DeleteAccount(self._account)
 
     @property
@@ -144,7 +144,7 @@ class DeleteAccount(StateChange):
         super().__init__(StateChangeType.DELETE_ACCOUNT, account.name)
         self._account = account.copy()
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'CreateAccount':
         return CreateAccount(self._account)
 
     @property
@@ -164,7 +164,7 @@ class IncrementAccountNonce(StateChange):
     def __init__(self, account_name: str):
         super().__init__(StateChangeType.INCREMENT_ACCOUNT_NONCE, account_name)
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'DecrementAccountNonce':
         return DecrementAccountNonce(self._account_name)
 
 
@@ -177,7 +177,7 @@ class DecrementAccountNonce(StateChange):
     def __init__(self, account_name: str):
         super().__init__(StateChangeType.DECREMENT_ACCOUNT_NONCE, account_name)
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'IncrementAccountNonce':
         return IncrementAccountNonce(self._account_name)
 
 
@@ -192,7 +192,7 @@ class UpdateAccountStorage(StateChange):
         self._delta_apply = delta_apply
         self._delta_revert = delta_revert
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'UpdateAccountStorage':
         return UpdateAccountStorage(self._account_name, self._delta_revert, self._delta_apply)
 
     @property

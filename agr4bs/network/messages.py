@@ -33,35 +33,35 @@ class Message:
         self._recipient = None
 
     @property
-    def origin(self):
+    def origin(self) -> str:
         """
             Get the origin of the message
         """
         return self._origin
 
     @property
-    def event(self):
+    def event(self) -> str:
         """
             Get the event that should be fired on reception of the Message
         """
         return self._event
 
     @property
-    def data(self):
+    def data(self) -> tuple:
         """
             Get the data contained in the Message
         """
         return self._data
 
     @property
-    def date(self):
+    def date(self) -> int:
         """
             Get the date at which the message should be received
         """
         return self._date
 
     @property
-    def nonce(self):
+    def nonce(self) -> int:
         """
             Get the nonce of the message
         """
@@ -72,21 +72,21 @@ class Message:
         self._nonce = value
 
     @property
-    def recipient(self):
+    def recipient(self) -> str:
         """
             Get the recipient of the message
         """
         return self._recipient
 
     @recipient.setter
-    def recipient(self, recipient):
+    def recipient(self, recipient: str):
         self._recipient = recipient
 
     @date.setter
-    def date(self, date):
+    def date(self, date: int):
         self._date = date
 
-    def __lt__(self, other: 'Message'):
+    def __lt__(self, other: 'Message') -> bool:
         if self._date == other.date:
             return self._nonce < other.nonce
 

@@ -184,6 +184,16 @@ class IBlockchain():
 
         return block
 
+    def get_direct_children(self, block: IBlock) -> list[IBlock]:
+        """
+            Get the direct children of a given block
+        """
+
+        if self.get_block(block.hash) is None:
+            return
+
+        return self._children[block.hash]
+    
     def get_children(self, block: IBlock) -> list[IBlock]:
         """
             Get all the children blocks from a given block
@@ -233,10 +243,13 @@ class IBlockchain():
             Find a path from block_a to block_b in the chain
         """
         common_ancestor = self.find_common_ancestor(block_a, block_b)
-        reverted_blocks = self.get_subchain(block_a, common_ancestor)
-        appended_blocks = self.get_subchain(block_b, common_ancestor)
 
-        return reverted_blocks, appended_blocks
+        if block_a == self.genesis or block_a.hash == block_b.parent_hash:
+            return [], self.get_subchain(block_b, common_ancestor)
+        elif block_b == self.genesis or block_b.hash == block_a.parent_hash:
+            return self.get_subchain(block_a, common_ancestor), []
+        else:
+            return self.get_subchain(block_a, common_ancestor), self.get_subchain(block_b, common_ancestor)
 
     def add_block_strict(self, block: IBlock) -> bool:
         """ Add a Block to the Blockchain in Strict Mode

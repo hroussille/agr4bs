@@ -100,9 +100,11 @@ class Attestation(Serializable):
         """
         return f"Epoch: {self._epoch} Slot: {self._slot}, Source: {self._source}, Target: {self._target}"
 
+    def __hash__(self) -> int:
+        return hash(self._agent_name) + hash(self._epoch) + hash(self._slot) + hash(self._index) + hash(self._root) + hash(self._source) + hash(self._target)
+    
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Attestation):
             return False
         
         return self._agent_name == other.agent_name and self._epoch == other.epoch and self._slot == other.slot and self._index == other.index and self._root == other.root and self._source == other.source and self._target == other.target
-
