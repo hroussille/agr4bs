@@ -2,16 +2,18 @@
     Core and Custom messages types definitions
 """
 
-from agr4bs.blockchain.block import BlockHeader
+from ..blockchain.block import IBlockHeader
+from ..events import CREATE_TRANSACTION, RECEIVE_TRANSACTION
 from ..events import REQUEST_BOOTSTRAP_STATIC_PEERS, BOOTSTRAP_STATIC_PEERS
 from ..events import REQUEST_PEER_DISCOVERY, PEER_DISCOVERY
 from ..events import REQUEST_BOOTSTRAP_PEERS, BOOTSTRAP_PEERS
 from ..events import REQUEST_INBOUND_PEER, ACCEPT_INBOUND_PEER, DENY_INBOUND_PEER, DROP_INBOUND_PEER
 from ..events import STOP_SIMULATION
-from ..events import CREATE_BLOCK, RECEIVE_BLOCK, REQUEST_BLOCK, RECEIVE_BLOCK_HEADER, REQUEST_BLOCK_HEADER
+from ..events import CREATE_BLOCK, RECEIVE_BLOCK, REQUEST_BLOCK, RECEIVE_BLOCK_HEADER
 from ..events import RUN_SCHEDULABLE
-
-from ..blockchain import Block
+from ..events import REQUEST_BLOCK_ENDORSEMENT, RECEIVE_BLOCK_ENDORSEMENT
+from ..events import NEXT_EPOCH, NEXT_SLOT
+from ..common import Serializable
 
 
 class Message:
@@ -31,35 +33,35 @@ class Message:
         self._recipient = None
 
     @property
-    def origin(self):
+    def origin(self) -> str:
         """
             Get the origin of the message
         """
         return self._origin
 
     @property
-    def event(self):
+    def event(self) -> str:
         """
             Get the event that should be fired on reception of the Message
         """
         return self._event
 
     @property
-    def data(self):
+    def data(self) -> tuple:
         """
             Get the data contained in the Message
         """
         return self._data
 
     @property
-    def date(self):
+    def date(self) -> int:
         """
             Get the date at which the message should be received
         """
         return self._date
 
     @property
-    def nonce(self):
+    def nonce(self) -> int:
         """
             Get the nonce of the message
         """
@@ -70,21 +72,21 @@ class Message:
         self._nonce = value
 
     @property
-    def recipient(self):
+    def recipient(self) -> str:
         """
             Get the recipient of the message
         """
         return self._recipient
 
     @recipient.setter
-    def recipient(self, recipient):
+    def recipient(self, recipient: str):
         self._recipient = recipient
 
     @date.setter
-    def date(self, date):
+    def date(self, date: int):
         self._date = date
 
-    def __lt__(self, other: 'Message'):
+    def __lt__(self, other: 'Message') -> bool:
         if self._date == other.date:
             return self._nonce < other.nonce
 
@@ -233,6 +235,28 @@ class StopSimulation(Message):
         super().__init__(origin, _event)
 
 
+class NextSlot(Message):
+
+    """
+        Message sent to notify an Agent to move on to the next time slot.
+    """
+
+    def __init__(self, origin: str, slot: int, attesters: list[str]):
+        _event = NEXT_SLOT
+        super().__init__(origin, _event, slot, attesters)
+
+
+class NextEpoch(Message):
+
+    """
+        Message sent to notify an Agent to move on the the next time epoch
+    """
+
+    def __init__(self, origin: str, epoch: int):
+        _event = NEXT_EPOCH
+        super().__init__(origin, _event, epoch)
+
+
 class CreateBlock(Message):
 
     """
@@ -251,9 +275,10 @@ class ProposeBlockHeader(Message):
         Message sent to propose a newly created block header to other participants
     """
 
-    def __init__(self, origin: str, header: BlockHeader):
+    def __init__(self, origin: str, header: IBlockHeader):
         _event = RECEIVE_BLOCK_HEADER
         super().__init__(origin, _event, header.from_serialized(header.serialize))
+
 
 class ProposeBlock(Message):
 
@@ -261,18 +286,21 @@ class ProposeBlock(Message):
         Message sent to propose a newly created block to other participants.
     """
 
-    def __init__(self, origin: str, block: Block):
+    def __init__(self, origin: str, block: 'Block'):
         _event = RECEIVE_BLOCK
-        super().__init__(origin, _event, Block.from_serialized(block.serialize()))
+        super().__init__(origin, _event, block.from_serialized(block.serialize()))
+
 
 class RequestBlock(Message):
 
     """ 
         Message sent to request a specific block to one or several peer
     """
+
     def __init__(self, origin: str, hash: str):
         _event = REQUEST_BLOCK
         super().__init__(origin, _event, hash)
+
 
 class DiffuseBlock(Message):
 
@@ -280,6 +308,47 @@ class DiffuseBlock(Message):
         Message sent to diffuse a block to the network
     """
 
-    def __init__(self, origin: str, block: Block):
+    def __init__(self, origin: str, block: 'Block'):
         _event = RECEIVE_BLOCK
-        super().__init__(origin, _event, Block.from_serialized(block.serialize()))
+        super().__init__(origin, _event, block.from_serialized(block.serialize()))
+
+
+class CreateTransaction(Message):
+
+    """
+        System Message sent to notify an agent that it can create
+        a Transaction.
+    """
+
+    def __init__(self, origin: str, fee: int, amount: int, payload: int, receiver: int):
+        _event = CREATE_TRANSACTION
+        super().__init__(origin, _event, fee, amount, payload, receiver)
+
+
+class DiffuseTransaction(Message):
+
+    """
+        Message sent to diffuse a transaction to the network
+    """
+
+    def __init__(self, origin: str, tx: 'Transaction'):
+        _event = RECEIVE_TRANSACTION
+        super().__init__(origin, _event, tx.from_serialized(tx.serialize()))
+
+class RequestBlockEndorsement(Message):
+    """
+        Message sent to request a block endorsement to one or several peer
+    """
+    def __init__(self, origin: str):
+        _event = REQUEST_BLOCK_ENDORSEMENT
+        super().__init__(origin, _event)
+
+class DiffuseBlockEndorsement(Message):
+
+    """
+        Message sent to diffuse a block endorsement to the network
+    """
+
+    def __init__(self, origin: str, endorsement: 'Serializable'):
+        _event = RECEIVE_BLOCK_ENDORSEMENT
+        super().__init__(origin, _event, endorsement.from_serialized(endorsement.serialize()))

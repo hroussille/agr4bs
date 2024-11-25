@@ -3,17 +3,16 @@
 """
 import copy
 import datetime
+import pickle
 
 from collections import defaultdict
 from typing import Union
-from agr4bs.events.events import RUN_SCHEDULABLE
-
-from agr4bs.network.messages import RunSchedulable
-
+from ..events.events import RUN_SCHEDULABLE
+from ..network.messages import RunSchedulable
 from ..events import INIT, STOP_SIMULATION, RECEIVE_MESSAGE, SEND_MESSAGE, CLEANUP
 from ..network import Message
 from .agent import Agent, AgentType
-from ..blockchain import Block
+from ..blockchain import IBlock
 from .schedulable import Schedulable
 
 
@@ -26,7 +25,7 @@ class ExternalAgent(Agent):
         It may contribute to the system or simply interact with it autonomously.
     """
 
-    def __init__(self, name: str, genesis: Block, factory: 'Factory'):
+    def __init__(self, name: str, genesis: IBlock, factory: 'IFactory'):
 
         super().__init__(name, AgentType.EXTERNAL_AGENT)
 
@@ -34,7 +33,7 @@ class ExternalAgent(Agent):
         self.safe_inject('factory', factory)
 
         self.drop_time = 2
-        self.max_inbound_peers = 15
+        self.max_inbound_peers = 20
         self.max_outbound_peers = 5
 
         self._network = factory.build_network()
@@ -42,6 +41,7 @@ class ExternalAgent(Agent):
         self._schedulables = {}
         self._exit = False
         self._date = None
+        self._initial_date = None
 
         self._add_event_handler(STOP_SIMULATION, self.stop_simulation_handler)
         self._add_event_handler(RUN_SCHEDULABLE, self.run_schedulable_handler)
@@ -112,11 +112,10 @@ class ExternalAgent(Agent):
             Core event handler : RUN_SCHEDULABLE
             Run a scheduled behavior
         """
-
         if behavior_name in agent._schedulables:
             schedulable = agent._schedulables[behavior_name]
             schedulable.handler(agent)
-            agent._schedule_behavior(behavior_name, schedulable.frequency)
+            agent.schedule_behavior(behavior_name, schedulable.frequency)
 
     def fire_event(self, event, *args, **kwargs):
         """
@@ -134,7 +133,7 @@ class ExternalAgent(Agent):
             to = [to]
 
         for recipient in to:
-            _message = copy.copy(message)
+            _message = pickle.loads(pickle.dumps(message, -1))
             _message.recipient = recipient
             _message.date = self._date
             self._network.send_message(_message, no_drop=no_drop)
@@ -165,19 +164,20 @@ class ExternalAgent(Agent):
         self.fire_event(RECEIVE_MESSAGE, message.origin)
         self.fire_event(message.event, *message.data)
 
-    def _schedule_behavior(self, behavior_name: str, frequency: datetime.timedelta):
+    def schedule_behavior(self, behavior_name: str, frequency: datetime.timedelta):
         message = RunSchedulable(self.name, behavior_name)
         self.send_system_message(message, self.name, delay=frequency)
 
     def _init_schedulables(self):
         for behavior_name, schedulable in self._schedulables.items():
-            self._schedule_behavior(behavior_name, schedulable.frequency)
+            self.schedule_behavior(behavior_name, schedulable.frequency)
 
     def init(self, date):
         """
             Initializes the agent
         """
         self._date = date
+        self._initial_date = date
         self._init_schedulables()
         self.fire_event(INIT)
 

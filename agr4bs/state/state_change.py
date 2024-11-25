@@ -14,19 +14,19 @@ class StateChangeType(Enum):
     """
 
     # Account data structure related operations
-    CREATE_ACCOUNT = "create_account_name"
-    DELETE_ACCOUNT = "delete_account_name"
+    CREATE_ACCOUNT = "create_account"
+    DELETE_ACCOUNT = "delete_account"
 
     # Account balance related operations
     ADD_BALANCE = "add_balance"
     REMOVE_BALANCE = "remove_balance"
 
     # Account Nonce related operations
-    INCREMENT_ACCOUNT_NONCE = "increment_account_name_nonce"
-    DECREMENT_ACCOUNT_NONCE = "decrement_account_name_nonce"
+    INCREMENT_ACCOUNT_NONCE = "increment_account_nonce"
+    DECREMENT_ACCOUNT_NONCE = "decrement_account_nonce"
 
     # Account Storage related operations
-    UPDATE_ACCOUNT_STORAGE = "set_account_name_storage"
+    UPDATE_ACCOUNT_STORAGE = "update_account_storage"
 
 
 class StateChange():
@@ -36,7 +36,7 @@ class StateChange():
         Blockchain is updated.
     """
 
-    def __init__(self, _type: StateChangeType, account_name: str) -> None:
+    def __init__(self, _type: 'StateChangeType', account_name: str) -> None:
         self._type = _type
         self._account_name = account_name
 
@@ -60,6 +60,9 @@ class StateChange():
         """
         return self._account_name
 
+    def __str__(self):
+        return f"type: {self._type} account: {self._account_name}"
+
 
 class AddBalance(StateChange):
 
@@ -71,7 +74,7 @@ class AddBalance(StateChange):
         super().__init__(StateChangeType.ADD_BALANCE, account_name)
         self._value = value
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'RemoveBalance':
         return RemoveBalance(self._account_name, self._value)
 
     @property
@@ -81,6 +84,8 @@ class AddBalance(StateChange):
         """
         return self._value
 
+    def __str__(self):
+        return super().__str__() + f" value: {self._value}"
 
 class RemoveBalance(StateChange):
 
@@ -92,7 +97,7 @@ class RemoveBalance(StateChange):
         super().__init__(StateChangeType.REMOVE_BALANCE, account_name)
         self._value = value
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'AddBalance':
         return AddBalance(self._account_name, self._value)
 
     @property
@@ -101,6 +106,9 @@ class RemoveBalance(StateChange):
             Get the vale change of the account_name balance
         """
         return self._value
+
+    def __str__(self):
+        return super().__str__() + f" value: {self._value}"
 
 
 class CreateAccount(StateChange):
@@ -114,7 +122,7 @@ class CreateAccount(StateChange):
         super().__init__(StateChangeType.CREATE_ACCOUNT, account.name)
         self._account = account.copy()
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'DeleteAccount':
         return DeleteAccount(self._account)
 
     @property
@@ -136,7 +144,7 @@ class DeleteAccount(StateChange):
         super().__init__(StateChangeType.DELETE_ACCOUNT, account.name)
         self._account = account.copy()
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'CreateAccount':
         return CreateAccount(self._account)
 
     @property
@@ -156,7 +164,7 @@ class IncrementAccountNonce(StateChange):
     def __init__(self, account_name: str):
         super().__init__(StateChangeType.INCREMENT_ACCOUNT_NONCE, account_name)
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'DecrementAccountNonce':
         return DecrementAccountNonce(self._account_name)
 
 
@@ -169,7 +177,7 @@ class DecrementAccountNonce(StateChange):
     def __init__(self, account_name: str):
         super().__init__(StateChangeType.DECREMENT_ACCOUNT_NONCE, account_name)
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'IncrementAccountNonce':
         return IncrementAccountNonce(self._account_name)
 
 
@@ -184,7 +192,7 @@ class UpdateAccountStorage(StateChange):
         self._delta_apply = delta_apply
         self._delta_revert = delta_revert
 
-    def revert(self) -> StateChange:
+    def revert(self) -> 'UpdateAccountStorage':
         return UpdateAccountStorage(self._account_name, self._delta_revert, self._delta_apply)
 
     @property

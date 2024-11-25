@@ -3,7 +3,7 @@
 """
 
 import pickle
-from agr4bs import Payload, Transaction
+from agr4bs import Payload, ITransaction
 
 
 def test_tx_no_payload():
@@ -11,7 +11,7 @@ def test_tx_no_payload():
     Ensures that a tx can be created with no Payload
     Ensures serialization validity
     """
-    tx = Transaction("agent0", "agent1", 0, value=1000, fee=1)
+    tx = ITransaction("agent0", "agent1", 0, value=1000, fee=1)
     assert tx.origin == "agent0"
     assert tx.to == "agent1"
     assert tx.value == 1000
@@ -21,7 +21,7 @@ def test_tx_no_payload():
 
     assert serialized == pickle.dumps(tx)
 
-    deserialized = Transaction.from_serialized(serialized)
+    deserialized = ITransaction.from_serialized(serialized)
 
     assert deserialized is not None
     assert deserialized.compute_hash() == tx.hash
@@ -32,7 +32,7 @@ def test_tx_with_empty_payload():
     Ensures that a tx can be created with an empty Payload
     Ensures serialization validity
     """
-    tx = Transaction("agent0", "agent1", 0, value=1000,
+    tx = ITransaction("agent0", "agent1", 0, value=1000,
                      fee=1, payload=Payload())
     assert tx.origin == "agent0"
     assert tx.to == "agent1"
@@ -43,7 +43,7 @@ def test_tx_with_empty_payload():
 
     assert serialized == pickle.dumps(tx)
 
-    deserialized = Transaction.from_serialized(serialized)
+    deserialized = ITransaction.from_serialized(serialized)
 
     assert deserialized is not None
     assert deserialized.compute_hash() == tx.hash
@@ -54,7 +54,7 @@ def test_tx_with_payload():
     Ensures that a tx can be created with a non empty Paylaod
     Ensures serialization validity
     """
-    tx = Transaction("agent0", "agent1", 0, value=1000,
+    tx = ITransaction("agent0", "agent1", 0, value=1000,
                      fee=1, payload=Payload(b"deadbeef"))
     assert tx.origin == "agent0"
     assert tx.to == "agent1"
@@ -62,6 +62,6 @@ def test_tx_with_payload():
     assert tx.fee == 1
 
     serialized = tx.serialize()
-    deserialized = Transaction.from_serialized(serialized)
+    deserialized = ITransaction.from_serialized(serialized)
 
     assert deserialized == tx

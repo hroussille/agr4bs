@@ -27,6 +27,7 @@ class State:
     """
 
     def __init__(self) -> None:
+        self._receipts: dict(Receipt) = {}
         self._accounts: dict(Account) = {}
         self._create_account(CreateAccount(Account('genesis', inf)))
 
@@ -213,5 +214,5 @@ class State:
         """
             Copy the current State
         """
-        return copy.deepcopy(self)
-        # return pickle.loads(pickle.dumps(self))
+        #return copy.deepcopy(self)
+        return pickle.loads(pickle.dumps(self))

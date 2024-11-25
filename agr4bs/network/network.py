@@ -52,7 +52,9 @@ class Network():
         """
             Send a message to the network.
         """
-        if random.random() > self.drop_rate or no_drop is True:
+        drop_probability = random.random()
+
+        if drop_probability > self.drop_rate or no_drop is True:
             delta = datetime.timedelta(
                 milliseconds=int(random.random() * self.delay))
             message.date = message.date + delta
@@ -61,6 +63,9 @@ class Network():
             self._message_queue.put(message)
 
     def has_message(self):
+        """
+            Check if the network has a message to deliver
+        """
         return not self._message_queue.empty()
 
     def get_next_message(self):

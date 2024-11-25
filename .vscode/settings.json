@@ -4,5 +4,9 @@
   "python.linting.pycodestyleArgs": [
     "--ignore=E501"
   ],
-  "python.linting.pylintEnabled": true
+  "python.linting.pylintEnabled": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8"
+  },
+  "python.formatting.provider": "none"
 }

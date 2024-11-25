@@ -6,7 +6,6 @@ from ..state import State
 import pickle
 import copy
 
-
 class ExecutionContext:
 
     def __init__(self, origin: str, _from: str, to: str, value: int, depth: int, state: State, vm: 'VM') -> None:
@@ -66,4 +65,3 @@ class ExecutionContext:
             Copy the current ExecutionContext
         """
         return copy.deepcopy(self)
-        # pickle.loads(pickle.dumps(self))

@@ -3,12 +3,11 @@
     Blockchain file class implementation
 """
 
-import random
 from collections import defaultdict, deque
-from .block import Block
+from .block import IBlock
 
 
-class Blockchain():
+class IBlockchain():
 
     """
         Blockchain class implementation :
@@ -19,11 +18,11 @@ class Blockchain():
         according to some predefined rules.
     """
 
-    def __init__(self, genesis: Block) -> None:
+    def __init__(self, genesis: IBlock) -> None:
 
         genesis.compute_hash()
         self._genesis = genesis
-        self._blocks = {}
+        self._blocks = defaultdict(lambda: None)
         self._staging_blocks = defaultdict(lambda: [])
         self._blocks[genesis.hash] = genesis
         self._children = defaultdict(lambda: [])
@@ -31,7 +30,7 @@ class Blockchain():
 
         # TODO: add an internal nonce to avoid hash conflich when similar data are contained ?
 
-    def get_block(self, _hash: str) -> Block:
+    def get_block(self, _hash: str) -> IBlock:
         """ Get a specific block by its hash
 
             :param _hash: the hash of the Block to retrieve
@@ -44,7 +43,7 @@ class Blockchain():
 
         return None
 
-    def get_chain(self) -> list[Block]:
+    def get_chain(self) -> list[IBlock]:
         """ Get the current main chain
 
             :returns: The list of Blocks constituting the main chain
@@ -60,7 +59,7 @@ class Blockchain():
         return list(chain)
 
     @property
-    def genesis(self) -> Block:
+    def genesis(self) -> IBlock:
         """ Get the genesis Block of the Blockchain
 
             :returns: The genesis Block
@@ -69,7 +68,7 @@ class Blockchain():
         return self._genesis
 
     @property
-    def head(self) -> Block:
+    def head(self) -> IBlock:
         """ Get the head Block of the Blockchain
 
             :returns: The head Block
@@ -78,13 +77,13 @@ class Blockchain():
         return self._head
 
     @head.setter
-    def head(self, new_head: Block):
+    def head(self, new_head: IBlock):
         """ Set the head Block of the Blockchain
 
         :param new_head: the new head
         :type new_head: Block
         """
-        
+
         if self.get_block(new_head.hash) is None:
             raise ValueError("Setting head with an uknown block")
 
@@ -93,7 +92,7 @@ class Blockchain():
 
         self._head = new_head
 
-    def is_block_on_main_chain(self, block: Block) -> bool:
+    def is_block_on_main_chain(self, block: IBlock) -> bool:
         """ Check wether a Block is part of the main chain or not
 
             :param block: The Block to check for
@@ -113,79 +112,14 @@ class Blockchain():
 
         return False
 
-    def _unstage_blocks(self, block: Block) -> list[Block]:
-        """ INTERNAL METHOD ONLY : DO NOT CALL IT EXTERNALLY
-
-            Unstage all block dependant on block and cleanup the internal
-            stagingBlocks data structure.
-
-            When a Block is to be added to the Blockchain, but its parent is uknown,
-            it will be placed in the staging area where it will wait until all of its
-            depencies are met. This method retrieves all dependencies "recursively" and
-            clear the appropriate parts of the staging area. The caller is expected to
-            immediately add the returned Blocks.
-
-            :param block: The Block for which dependencies should be made available
-            :type block: Block
-            :returns: The ordered list of dependant Blocks that can now be included
-            :rtype: list[Block]
-        """
-        dependencies = [block]
-        all_unstaged = []
-
-        while len(dependencies) > 0:
-            new_dependencies = []
-            for dependency in dependencies:
-                if dependency.hash in self._staging_blocks:
-                    unstaged = self._staging_blocks[dependency.hash]
-                    new_dependencies = [*new_dependencies, *unstaged]
-                    del self._staging_blocks[dependency.hash]
-                    all_unstaged = [*all_unstaged, *unstaged]
-
-            dependencies = new_dependencies
-
-        return list(all_unstaged)
-
-    def find_new_head(self) -> Block:
+    def find_new_head(self) -> IBlock:
         """
             Find the new head in the blockchain
             TODO: optimize this
         """
+        raise NotImplementedError;
 
-        sorted_blocks = [block for block in sorted(self._blocks.values(), key=lambda _block: _block.height, reverse=True)]
-        candidate =  next(block for block in sorted_blocks if not block.invalid)
-
-        if self._is_new_head(candidate):
-            return candidate
-
-        return self._head
-
-    def _is_new_head(self, block: Block) -> bool:
-        """ INTERNAL METHOD ONLY : DO NOT CALL IT EXTERNALLY
-
-            If block height is higher than head it becomes the new head
-            Else If block height is equal to head height : random choice
-            Otherwise head is left unchanged
-
-            :param block: The block that may be elected as the new head
-            :type block: Block
-        """
-
-        if block.invalid:
-            raise ValueError("checking an invalid block for new head")
-
-        if self._head.invalid:
-            return True
-
-        if block.height > self._head.height:
-            return True
-
-        if block.height == self._head.height and random.random() > 0.5:
-            return True
-
-        return False
-
-    def get_subchain(self, child: Block, parent: Block, include_child=True, include_parent=False) -> bool:
+    def get_subchain(self, child: IBlock, parent: IBlock, include_child=True, include_parent=False) -> bool:
         """
             Get the subchain between child and parent
         """
@@ -194,22 +128,38 @@ class Blockchain():
         if include_child is True:
             path.appendleft(child)
 
-        while child.parent_hash != parent.hash and child.parent_hash is not None:
-            child = self._blocks[child.parent_hash]
-            path.appendleft(self._blocks[child.hash])
+        if child.hash != parent.hash:
+            while child.parent_hash != parent.hash and child.parent_hash is not None:
+                child = self._blocks[child.parent_hash]
+                path.appendleft(self._blocks[child.hash])
 
-        if child.parent_hash != parent.hash:
-            raise ValueError("Not path between blocks")
+            if child.parent_hash != parent.hash:
+                
+                current = self._head
+
+                while True:
+
+                    if (current.hash == self.genesis.hash):
+                        break
+
+                    current = self._blocks[current.parent_hash]
+
+                raise ValueError("Not path between blocks")
 
         if include_parent:
             path.appendleft(parent)
 
         return list(path)
 
-    def is_close_parent(self, child_block: Block, parent_block: Block, limit=10) -> bool:
+    def is_close_parent(self, child_block: IBlock, parent_block: IBlock, limit=10) -> bool:
         """
             Find out if a Block is a distant parent of another Block
         """
+
+        # Special case if child == parent
+        if child_block.hash == parent_block.hash:
+            return True
+
         for _ in range(limit):
 
             if child_block.parent_hash == parent_block.hash:
@@ -222,7 +172,7 @@ class Blockchain():
 
         return False
 
-    def get_nth_parent(self, block: Block, n: int) -> Block:
+    def get_nth_parent(self, block: IBlock, n: int) -> IBlock:
         """
             Get the nth parent of a given Block.
             Stops at genesis block.
@@ -234,8 +184,17 @@ class Blockchain():
 
         return block
 
-    def get_children(self, block: Block) -> list[Block]:
+    def get_direct_children(self, block: IBlock) -> list[IBlock]:
+        """
+            Get the direct children of a given block
+        """
 
+        if self.get_block(block.hash) is None:
+            return
+
+        return self._children[block.hash]
+    
+    def get_children(self, block: IBlock) -> list[IBlock]:
         """
             Get all the children blocks from a given block
         """
@@ -253,7 +212,7 @@ class Blockchain():
 
         return children
 
-    def find_common_ancestor(self, block_a: Block, block_b: Block) -> Block:
+    def find_common_ancestor(self, block_a: IBlock, block_b: IBlock) -> IBlock:
         """
             Find the first common ancestor of block_a and block_b
             Worst case is assumed to be the genesis block
@@ -279,17 +238,20 @@ class Blockchain():
 
         raise ValueError("Blocks have no common ancestor")
 
-    def find_path(self, block_a: Block, block_b: Block) -> tuple[list[Block], list[Block]]:
+    def find_path(self, block_a: IBlock, block_b: IBlock) -> tuple[list[IBlock], list[IBlock]]:
         """
-            Find a parth from block_a to block_b in the chain
+            Find a path from block_a to block_b in the chain
         """
         common_ancestor = self.find_common_ancestor(block_a, block_b)
-        reverted_blocks = self.get_subchain(block_a, common_ancestor)
-        appended_blocks = self.get_subchain(block_b, common_ancestor)
 
-        return reverted_blocks, appended_blocks
+        if block_a == self.genesis or block_a.hash == block_b.parent_hash:
+            return [], self.get_subchain(block_b, common_ancestor)
+        elif block_b == self.genesis or block_b.hash == block_a.parent_hash:
+            return self.get_subchain(block_a, common_ancestor), []
+        else:
+            return self.get_subchain(block_a, common_ancestor), self.get_subchain(block_b, common_ancestor)
 
-    def add_block_strict(self, block: Block) -> bool:
+    def add_block_strict(self, block: IBlock) -> bool:
         """ Add a Block to the Blockchain in Strict Mode
 
             Strict Mode only allows the inclusion of a new Block if its
@@ -302,24 +264,9 @@ class Blockchain():
             :returns: wether the Block was added to the chain or not
             :rtype: bool
         """
+        raise NotImplementedError
 
-        if block.hash in self._blocks:
-            return False
-
-        if block.parent_hash not in self._blocks:
-            return False
-
-        block.height = self._blocks[block.parent_hash].height + 1
-        block.invalid = self._blocks[block.parent_hash].invalid
-        self._blocks[block.hash] = block
-
-        if self._is_new_head(block):
-            self._head = block
-
-        return True
-
-    def mark_invalid(self, block: Block):
-
+    def mark_invalid(self, block: IBlock):
         """
             Mark a block and all its descendent as invalid
         """
@@ -336,7 +283,7 @@ class Blockchain():
 
         return self._head.invalid
 
-    def add_block(self, block: Block) -> tuple[bool, list[Block], list[Block]]:
+    def add_block(self, block: IBlock) -> tuple[bool, list[IBlock], list[IBlock]]:
         """ Add a Block to the Blockchain in non Strict mode
 
             Non Strict Mode allows the inclusion of a Block in the Blockchain
@@ -351,41 +298,4 @@ class Blockchain():
             :returns: wether the Block was added to the chain or not
             :rtype: bool
         """
-
-        # Block is already known : exit early
-        if block.hash in self._blocks:
-            return False, [], []
-
-        # Record the parent <-> child relation
-        if block not in self._children[block.parent_hash]:
-            self._children[block.parent_hash].append(block)
-
-        # Parent is uknown : add the block to staging
-        if block.parent_hash not in self._blocks and block.hash not in self._staging_blocks[block.parent_hash]:
-            self._staging_blocks[block.parent_hash].append(block)
-            return False, [], []
-
-        previous_head = self._head
-        added_blocks = [block, *self._unstage_blocks(block)]
-
-        for added_block in added_blocks:
-            if added_block.hash not in self._blocks:
-                if self.add_block_strict(added_block) is not True:
-                    raise ValueError("Chain is corrupted.")
-
-
-        if self._head == previous_head:
-            return (True, [], [])
-
-        reverted_blocks = []
-        appended_blocks = []
-
-        # Best case scenario : extending the main chain
-        if self.is_close_parent(self._head, previous_head, len(added_blocks)):
-            appended_blocks = self.get_subchain(self._head, previous_head)
-        
-        # Worse case scenario : reorg
-        else:
-            reverted_blocks, appended_blocks = self.find_path(previous_head, self._head)
-
-        return True, reverted_blocks, appended_blocks
+        raise NotImplementedError

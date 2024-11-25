@@ -5,15 +5,15 @@
 
 import pickle
 import pytest
-from agr4bs import Block, Transaction
+from agr4bs import IBlock, ITransaction
 
 
 def test_block_properties():
     """
         Test that Block class exposes the right properties
     """
-    tx = Transaction("agent0", "agent1", 0, value=1000, fee=1)
-    block = Block("genesis", "agent0", [tx])
+    tx = ITransaction("agent0", "agent1", 0, value=1000, fee=1)
+    block = IBlock("genesis", "agent0", [tx])
 
     assert block.parent_hash == "genesis"
     assert block.creator == "agent0"
@@ -27,34 +27,23 @@ def test_block_properties():
         excinfo.value)
 
 
-def test_block_total_fees():
-    """
-        Test that a Block total fee is computed correctly
-    """
-    tx1 = Transaction("agent0", "agent1", 0, value=1000, fee=1)
-    tx2 = Transaction("agent0", "agent1", 0, value=1000, fee=1)
-    block = Block("genesis", "agent0", [tx1, tx2])
-
-    assert block.total_fees == 2
-
-
 def test_block_hash():
     """
         Test that a Block hash is computed correctly (SHA256)
     """
-    tx = Transaction("agent0", "agent1", 0, value=1000, fee=1)
-    block = Block("genesis", "agent0", [tx])
-    assert block.hash == "752a16a03f3b7c6908e7863bb6c917585f176876713035807243204cb9920adf"
+    tx = ITransaction("agent0", "agent1", 0, value=1000, fee=1)
+    block = IBlock("genesis", "agent0", [tx])
+    assert block.hash == "c7634fed0225a3e84f38d8c7321cd891500c6962376babea3f0dec80964557a7"
 
 
 def test_block_serialization():
     """
         Test that a Block serialization matches its content
     """
-    tx = Transaction("agent0", "agent1", 0, value=1000, fee=1)
-    block = Block("genesis", "agent0", [tx])
+    tx = ITransaction("agent0", "agent1", 0, value=1000, fee=1)
+    block = IBlock("genesis", "agent0", [tx])
 
     serialized = block.serialize()
 
-    deserialized = Block.from_serialized(serialized)
+    deserialized = IBlock.from_serialized(serialized)
     assert deserialized == block

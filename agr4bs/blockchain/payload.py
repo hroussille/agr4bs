@@ -12,6 +12,7 @@ class Payload(Serializable):
         Payload class implementation :
 
         A Payload is essentially some data that is included into a Transaction.
+        This data may be executed / interpreted, informative or simply vanity data.
     """
 
     def __init__(self, data: bytes = None):

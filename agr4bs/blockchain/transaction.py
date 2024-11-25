@@ -9,7 +9,7 @@ from ..common import Serializable
 from .payload import Payload
 
 
-class Transaction(Serializable):
+class ITransaction(Serializable):
 
     """
         Transaction class implementation :
@@ -110,13 +110,13 @@ class Transaction(Serializable):
             :rtype: str
         """
         hash_dict = {'from': self._origin, 'to': self._to,
-                     'value': self._value, 'fee': self._fee, 'payload': self._payload.serialize()}
+            'value': self._value, 'fee': self._fee, 'payload': self._payload.serialize(), 'nonce': self._nonce}
 
         return hashlib.sha256(pickle.dumps(hash_dict)).hexdigest()
 
     def __eq__(self, __o: object) -> bool:
 
-        if not isinstance(__o, Transaction):
+        if not isinstance(__o, ITransaction):
             return False
 
         return self._hash == __o.compute_hash()
